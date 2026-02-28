@@ -1,9 +1,9 @@
 name: Auto Update Parcheggi
-
 on:
   schedule:
-    - cron: '0 * * * *' # Gira ogni ora
-  workflow_dispatch: # Permette l'avvio manuale
+    # Gira al minuto 0 e al minuto 30 di ogni ora
+    - cron: '0,30 * * * *' 
+  workflow_dispatch: # Ti permette di avviarlo ancora a mano se serve
 
 jobs:
   build:
