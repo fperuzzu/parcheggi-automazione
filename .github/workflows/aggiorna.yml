@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Aggiungiamo i permessi espliciti per scrivere nel repository
+    permissions:
+      contents: write
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -27,6 +31,7 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add storico_parcheggi.db
-          git commit -m "Update database" || echo "No changes to commit"
+          # Forza l'aggiunta del file db se fosse nel gitignore
+          git add -f storico_parcheggi.db 
+          git commit -m "Aggiornamento automatico database: $(date)" || echo "No changes to commit"
           git push
