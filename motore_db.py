@@ -1,52 +1,42 @@
 import requests
 import sqlite3
-import json
 from datetime import datetime
 
-URL = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=5"
+# URL API Bologna - Dataset Parcheggi
+URL = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
 DB_NAME = "storico_parcheggi.db"
 
 def esegui_aggiornamento():
     try:
-        print(f"--- Inizio Debug API Bologna ---")
-        response = requests.get(URL)
-        data = response.json()
-        
-        results = data.get('results', [])
-        
-        if not results:
-            print("⚠️ L'API ha restituito 'results' vuoto. Ecco il JSON completo ricevuto:")
-            print(json.dumps(data, indent=2))
-            return
-
-        # STAMPA IL PRIMO RECORD COMPLETO PER VEDERE I NOMI DEI CAMPI
-        print("🔍 ANALISI PRIMO RECORD RICEVUTO:")
-        print(json.dumps(results[0], indent=2))
+        print("--- Inizio Aggiornamento Dati ---")
+        r = requests.get(URL).json()
+        records = r.get('results', [])
         
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
+        
+        # Creiamo la tabella con i campi giusti
         cursor.execute("CREATE TABLE IF NOT EXISTS storico (nome TEXT, liberi INTEGER, timestamp DATETIME)")
         
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         count = 0
         
-        for record in results:
-            fields = record.get('fields', {})
-            # Qui proveremo a estrarre i dati basandoci su quello che vedremo nel log
-            # Per ora usiamo un metodo generico per non far fallire lo script
-            nome = fields.get('nome') or fields.get('denominazione')
-            liberi = fields.get('posti_disponibili') or fields.get('posti_liberi')
+        for record in records:
+            # Basandoci sul tuo log, i dati sono DIRETTAMENTE nel record
+            # Non bisogna usare .get('fields')
+            nome = record.get('parcheggio') # <--- Nel log si chiama "parcheggio"
+            liberi = record.get('posti_liberi') # <--- Nel log si chiama "posti_liberi"
             
-            if nome and liberi is not None:
+            if nome is not None and liberi is not None:
                 cursor.execute("INSERT INTO storico VALUES (?, ?, ?)", (str(nome), int(liberi), now))
                 count += 1
         
         conn.commit()
         conn.close()
-        print(f"--- Fine Debug: Inseriti {count} record ---")
-            
+        print(f"✅ Successo! Inseriti {count} record alle {now}")
+        
     except Exception as e:
-        print(f"❌ Errore durante il debug: {e}")
+        print(f"❌ Errore critico: {e}")
 
 if __name__ == "__main__":
     esegui_aggiornamento()
