@@ -7,28 +7,21 @@ import os
 st.set_page_config(page_title="Analisi Parcheggi", layout="wide")
 st.title("📊 Monitoraggio Storico Parcheggi")
 
-# Debug: Vediamo cosa vede l'app nella sua cartella
-st.write("File presenti nel sistema:", os.listdir("."))
-
-DB_NAME = "storico_parcheggi.db"
+# Forza il percorso assoluto del database
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "storico_parcheggi.db")
 
 def get_data():
+    # Se il file esiste, lo apriamo
     if os.path.exists(DB_NAME):
-        conn = sqlite3.connect(DB_NAME)
-        df = pd.read_sql_query("SELECT * FROM storico", conn)
-        conn.close()
-        return df
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            df = pd.read_sql_query("SELECT * FROM storico", conn)
+            conn.close()
+            return df
+        except Exception as e:
+            st.error(f"Errore tecnico nel database: {e}")
+            return pd.DataFrame()
     return pd.DataFrame()
 
 df = get_data()
-
-if not df.empty:
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    parcheggio = st.sidebar.selectbox("Seleziona Parcheggio", df['nome'].unique())
-    df_filtered = df[df['nome'] == parcheggio].sort_values('timestamp')
-    
-    fig = px.line(df_filtered, x='timestamp', y='liberi', title=f"Disponibilità: {parcheggio}")
-    st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(df_filtered.tail(10))
-else:
-    st.info(f"Database '{DB_NAME}' non trovato. Controlla i nomi dei file su GitHub.")
