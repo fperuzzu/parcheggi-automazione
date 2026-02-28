@@ -1,0 +1,29 @@
+name: Auto Update Parcheggi
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Scatta ogni ora esatta
+  workflow_dispatch:      # Permette di avviarlo a mano per prova
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Installa librerie
+        run: pip install requests
+      - name: Esegui Motore
+        run: python motore_db.py
+      - name: Salva modifiche nel DB
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "actions@github.com"
+          git add storico_parcheggi.db
+          git commit -m "Update DB [skip ci]" || echo "Nessuna modifica"
+          git push
