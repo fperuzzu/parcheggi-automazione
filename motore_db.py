@@ -8,6 +8,17 @@ DB_NAME = "storico_parcheggi.db"
 def esegui_aggiornamento():
     try:
         r = requests.get(URL).json()
+        results = r.get('results', [])
+        
+        if not results:
+            print("⚠️ L'API ha restituito una lista vuota!")
+            return
+
+        # --- DIAGNOSTICA: STAMPIAMO COSA C'È DENTRO ---
+        first_record_fields = results[0].get('fields', {})
+        print(f"DEBUG - Struttura dati ricevuta: {first_record_fields}")
+        # ----------------------------------------------
+
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS storico (nome TEXT, liberi INTEGER, timestamp DATETIME)")
@@ -15,39 +26,23 @@ def esegui_aggiornamento():
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         count = 0
         
-        results = r.get('results', [])
-        
-        # DEBUG: Stampiamo il primo record per capire come si chiamano i campi oggi
-        if results:
-            first_fields = results[0].get('fields', {})
-            print(f"DEBUG - Campi ricevuti dall'API: {list(first_fields.keys())}")
-
         for record in results:
             fields = record.get('fields', {})
             
-            # Prova tutte le varianti note dei nomi dei campi di Bologna
-            nome = fields.get('nome') or fields.get('denominazione')
+            # Proviamo a indovinare i nomi più comuni
+            nome = fields.get('nome') or fields.get('denominazione') or fields.get('testo')
+            liberi = fields.get('posti_liberi') or fields.get('posti_disponibili') or fields.get('valore')
             
-            # Cerca i posti liberi in diverse etichette possibili
-            liberi = fields.get('posti_liberi') 
-            if liberi is None:
-                liberi = fields.get('posti_disponibili')
-            if liberi is None:
-                liberi = fields.get('stato') # A volte lo chiamano stato se è un numero
-
             if nome is not None and liberi is not None:
-                try:
-                    cursor.execute("INSERT INTO storico VALUES (?, ?, ?)", (str(nome), int(liberi), now))
-                    count += 1
-                except ValueError:
-                    continue # Salta se 'liberi' non è un numero
+                cursor.execute("INSERT INTO storico VALUES (?, ?, ?)", (str(nome), int(liberi), now))
+                count += 1
         
         conn.commit()
         conn.close()
-        print(f"✅ Fatto! Inseriti {count} record alle {now}")
+        print(f"✅ Risultato finale: Inseriti {count} record.")
         
     except Exception as e:
-        print(f"❌ Errore durante l'esecuzione: {e}")
+        print(f"❌ Errore: {e}")
 
 if __name__ == "__main__":
     esegui_aggiornamento()
