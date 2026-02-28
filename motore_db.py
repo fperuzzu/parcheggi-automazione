@@ -1,15 +1,27 @@
 import requests
 import sqlite3
+import json
 from datetime import datetime
 
-# URL API Bologna - Dataset Parcheggi
-URL = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
+URL = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=5"
 DB_NAME = "storico_parcheggi.db"
 
 def esegui_aggiornamento():
     try:
-        r = requests.get(URL).json()
-        records = r.get('results', [])
+        print(f"--- Inizio Debug API Bologna ---")
+        response = requests.get(URL)
+        data = response.json()
+        
+        results = data.get('results', [])
+        
+        if not results:
+            print("⚠️ L'API ha restituito 'results' vuoto. Ecco il JSON completo ricevuto:")
+            print(json.dumps(data, indent=2))
+            return
+
+        # STAMPA IL PRIMO RECORD COMPLETO PER VEDERE I NOMI DEI CAMPI
+        print("🔍 ANALISI PRIMO RECORD RICEVUTO:")
+        print(json.dumps(results[0], indent=2))
         
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -18,28 +30,23 @@ def esegui_aggiornamento():
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         count = 0
         
-        for record in records:
+        for record in results:
             fields = record.get('fields', {})
+            # Qui proveremo a estrarre i dati basandoci su quello che vedremo nel log
+            # Per ora usiamo un metodo generico per non far fallire lo script
+            nome = fields.get('nome') or fields.get('denominazione')
+            liberi = fields.get('posti_disponibili') or fields.get('posti_liberi')
             
-            # --- CORREZIONE NOMI CAMPI ---
-            # L'API attuale usa 'nome' e 'posti_disponibili'
-            nome = fields.get('nome')
-            liberi = fields.get('posti_disponibili') # <--- Cambiato da posti_liberi
-            
-            # Se non trova 'posti_disponibili', prova 'posti_liberi' (vecchio stile)
-            if liberi is None:
-                liberi = fields.get('posti_liberi')
-
-            if nome is not None and liberi is not None:
+            if nome and liberi is not None:
                 cursor.execute("INSERT INTO storico VALUES (?, ?, ?)", (str(nome), int(liberi), now))
                 count += 1
         
         conn.commit()
         conn.close()
-        print(f"✅ Successo! Inseriti {count} record alle {now}")
-        
+        print(f"--- Fine Debug: Inseriti {count} record ---")
+            
     except Exception as e:
-        print(f"❌ Errore: {e}")
+        print(f"❌ Errore durante il debug: {e}")
 
 if __name__ == "__main__":
     esegui_aggiornamento()
