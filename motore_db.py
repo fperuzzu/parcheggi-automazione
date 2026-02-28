@@ -2,17 +2,14 @@ import requests
 import sqlite3
 from datetime import datetime
 
-# Usiamo l'API v2.0 che è più stabile per la lettura diretta dei record
-URL = "https://opendata.comune.bologna.it/api/records/1.0/search/?dataset=disponibilita-parcheggi-vigente&rows=50"
+# URL API Bologna - Dataset Parcheggi
+URL = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
 DB_NAME = "storico_parcheggi.db"
 
 def esegui_aggiornamento():
     try:
-        response = requests.get(URL)
-        data = response.json()
-        
-        # In v2.0 i dati sono sotto 'records'
-        records = data.get('records', [])
+        r = requests.get(URL).json()
+        records = r.get('results', [])
         
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -21,12 +18,18 @@ def esegui_aggiornamento():
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         count = 0
         
-        for item in records:
-            # In v2.0 i dati sono dentro 'fields' direttamente nel record
-            fields = item.get('fields', {})
-            nome = fields.get('nome')
-            liberi = fields.get('posti_liberi')
+        for record in records:
+            fields = record.get('fields', {})
             
+            # --- CORREZIONE NOMI CAMPI ---
+            # L'API attuale usa 'nome' e 'posti_disponibili'
+            nome = fields.get('nome')
+            liberi = fields.get('posti_disponibili') # <--- Cambiato da posti_liberi
+            
+            # Se non trova 'posti_disponibili', prova 'posti_liberi' (vecchio stile)
+            if liberi is None:
+                liberi = fields.get('posti_liberi')
+
             if nome is not None and liberi is not None:
                 cursor.execute("INSERT INTO storico VALUES (?, ?, ?)", (str(nome), int(liberi), now))
                 count += 1
