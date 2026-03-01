@@ -4,19 +4,19 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 
 # Configurazione API delle città
-CITA_CONFIG = {
+CITTÀ_CONFIG = {
     "Bologna": {
         "url": "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50",
         "tipo": "json_v2",
         "mapping": {"nome": "parcheggio", "liberi": "posti_liberi"}
     },
     "Milano": {
-        "url": "https://dati.comune.milano.it/api/explore/v2.1/catalog/datasets/ds338_pms-disponibilita-parcheggi-pms-scambiatore-e-multipiano/records?limit=50",
+        "url": "https://dati.comune.milano.it/api/explore/v2.1/catalog/datasets/ds338_pms-disponibilita-parcheggi-pms-scambiatore-e-multipiano/records?limit=100",
         "tipo": "json_v2",
         "mapping": {"nome": "nome_parcheggio", "liberi": "posti_liberi"}
     },
     "Firenze": {
-        "url": "https://opendata.comune.fi.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50",
+        "url": "https://opendata.comune.fi.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100",
         "tipo": "json_v2",
         "mapping": {"nome": "nome", "liberi": "posti_liberi"}
     },
@@ -32,10 +32,10 @@ def esegui_aggiornamento():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Creazione tabella con la colonna 'citta' se non esiste
+    # Crea tabella con colonna citta
     cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
     
-    # FIX: Se la tabella esiste ma non ha la colonna 'citta', la aggiungiamo
+    # Migrazione automatica se manca colonna citta
     try:
         cursor.execute("SELECT citta FROM storico LIMIT 1")
     except sqlite3.OperationalError:
@@ -43,10 +43,10 @@ def esegui_aggiornamento():
     
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    for citta, info in CITA_CONFIG.items():
+    for citta, info in CITTÀ_CONFIG.items():
         try:
-            print(f"--- Recupero dati per {citta} ---")
-            r = requests.get(info["url"], timeout=15)
+            print(f"--- Aggiornamento {citta} ---")
+            r = requests.get(info["url"], timeout=20)
             
             if info["tipo"] == "json_v2":
                 records = r.json().get('results', [])
@@ -64,7 +64,7 @@ def esegui_aggiornamento():
                     if n and l is not None:
                         cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", (citta, str(n), int(l), now))
             
-            print(f"✅ {citta} aggiornata.")
+            print(f"✅ {citta} completata.")
         except Exception as e:
             print(f"❌ Errore su {citta}: {e}")
 
