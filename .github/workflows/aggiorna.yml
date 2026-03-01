@@ -1,17 +1,16 @@
 name: Auto Update Parcheggi
+
 on:
   schedule:
-    # Gira al minuto 0 e al minuto 30 di ogni ora
-    - cron: '0,30 * * * *' 
-  workflow_dispatch: # Ti permette di avviarlo ancora a mano se serve
+    # GIORNO: Ogni 30 min (minuto 0 e 30) dalle 05:00 alle 21:30 UTC (6:00-22:30 ITA)
+    - cron: '0,30 5-21 * * *'
+    # NOTTE: Ogni ora in punto dalle 22:00 alle 04:00 UTC (23:00-05:00 ITA)
+    - cron: '0 22,23,0-4 * * *'
+  workflow_dispatch: # Permette sempre l'avvio manuale
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Aggiungiamo i permessi espliciti per scrivere nel repository
-    permissions:
-      contents: write
-      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -29,9 +28,8 @@ jobs:
 
       - name: Save changes
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          # Forza l'aggiunta del file db se fosse nel gitignore
-          git add -f storico_parcheggi.db 
-          git commit -m "Aggiornamento automatico database: $(date)" || echo "No changes to commit"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add storico_parcheggi.db
+          git commit -m "Update database: $(date)" || exit 0
           git push
