@@ -2,7 +2,7 @@ import requests
 import sqlite3
 from datetime import datetime
 
-# CONFIGURAZIONE TESTATA E FUNZIONANTE AL 01/03/2026
+# CONFIGURAZIONE TESTATA AL 01/03/2026
 CITTÀ_CONFIG = {
     "Bologna": {
         "url": "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50",
@@ -18,7 +18,7 @@ CITTÀ_CONFIG = {
     },
     "Torino": {
         "url": "https://storing.5t.torino.it/fdt/extra/ParkingInformation.json",
-        "tipo": "torino_special"
+        "tipo": "torino"
     }
 }
 
@@ -30,22 +30,24 @@ def esegui_aggiornamento():
     cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
     
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    # Header per evitare blocchi "anti-bot" (soprattutto per Torino)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
     for citta, info in CITTÀ_CONFIG.items():
         try:
-            print(f"Richiedo dati per {citta}...")
+            print(f"Tentativo su {citta}...")
             r = requests.get(info["url"], headers=headers, timeout=15)
             r.raise_for_status()
             data = r.json()
             
             count = 0
-            # Torino ha una lista piatta, le altre hanno i dati in 'results'
+            # Torino restituisce una lista, gli altri comuni un oggetto con 'results'
             records = data if citta == "Torino" else data.get('results', [])
             
             for rec in records:
                 if citta == "Torino":
-                    nome, liberi = rec.get('name'), rec.get('free_spaces')
+                    nome = rec.get('name')
+                    liberi = rec.get('free_spaces')
                 else:
                     nome = rec.get(info["mapping"]["nome"])
                     liberi = rec.get(info["mapping"]["liberi"])
