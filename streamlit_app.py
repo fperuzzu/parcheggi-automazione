@@ -4,11 +4,10 @@ import sqlite3
 import plotly.express as px
 import os
 
-# 1. Configurazione della pagina (deve essere la prima istruzione)
+# 1. Configurazione della pagina
 st.set_page_config(page_title="ParkMonitor Italia", layout="wide", page_icon="🅿️")
 
 # --- BARRA LATERALE (SIDEBAR) ---
-# Se non la vedi sul telefono, clicca sulla piccola freccetta ">" in alto a sinistra
 st.sidebar.header("📍 Menu di Navigazione")
 citta_scelta = st.sidebar.selectbox(
     "Scegli la città da monitorare:", 
@@ -21,35 +20,30 @@ st.sidebar.markdown("[Offrimi un caffè](https://www.buymeacoffee.com)")
 # --------------------------------
 
 st.title(f"📊 Analisi Parcheggi: {citta_scelta}")
-st.markdown(f"Stai visualizzando i dati storici e in tempo reale per la città di **{citta_scelta}**.")
 
 def load_data(citta):
     if not os.path.exists("storico_parcheggi.db"):
         return pd.DataFrame()
     
     conn = sqlite3.connect("storico_parcheggi.db")
-    # Filtro SQL per caricare solo i dati della città scelta
     query = f"SELECT * FROM storico WHERE citta = '{citta}'"
     try:
         df = pd.read_sql_query(query, conn)
     except:
-        # Se il database non ha ancora la colonna 'citta', carichiamo tutto come Bologna
+        # Fallback se il db non è ancora stato aggiornato con la colonna citta
         df = pd.read_sql_query("SELECT * FROM storico", conn)
         df['citta'] = 'Bologna'
+        df = df[df['citta'] == citta]
     conn.close()
     return df
 
-# Carichiamo i dati in base alla scelta nella sidebar
 df = load_data(citta_scelta)
 
 if not df.empty:
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
-    # Lista dei parcheggi disponibili per quella città
     lista_parcheggi = sorted(df['nome'].unique())
     parcheggio = st.selectbox("🎯 Seleziona un parcheggio specifico:", lista_parcheggi)
     
-    # Filtro per il grafico
     df_filtered = df[df['nome'] == parcheggio].sort_values('timestamp')
     
     if not df_filtered.empty:
@@ -64,8 +58,6 @@ if not df.empty:
         st.subheader("📋 Storico rilevazioni")
         st.dataframe(df_filtered.tail(20).sort_values('timestamp', ascending=False), 
                      use_container_width=True, hide_index=True)
-    else:
-        st.info(f"Dati in arrivo per {parcheggio}...")
 else:
     st.warning(f"⚠️ Nessun dato trovato per {citta_scelta}.")
-    st.info("💡 Se hai appena aggiornato il codice, vai su GitHub Actions e clicca 'Run workflow' per scaricare i dati di Milano, Torino e Firenze.")
+    st.info("💡 Vai su GitHub Actions e clicca 'Run workflow' per scaricare i primi dati delle altre città!")
