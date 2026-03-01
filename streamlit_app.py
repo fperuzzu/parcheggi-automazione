@@ -1,69 +1,47 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
+import sqlite3
 import plotly.express as px
-from datetime import datetime, timedelta
+import os
 
-st.set_page_config(page_title="Monitoraggio Parcheggi", layout="wide")
+st.set_page_config(page_title="ParkMonitor Italia", layout="wide", page_icon="🅿️")
 
-DB_NAME = "storico_parcheggi.db"
+# Sidebar con le città funzionanti
+st.sidebar.header("📍 Selezione Città")
+citta_scelta = st.sidebar.selectbox("Scegli la città da monitorare:", ["Bologna", "Roma", "Bolzano"])
 
-def load_data():
-    conn = sqlite3.connect(DB_NAME)
-    # Carichiamo le ultime 24 ore di dati
-    query = "SELECT * FROM storico WHERE timestamp > ?"
-    ieri = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
-    df = pd.read_sql_query(query, conn, params=(ieri,))
+st.title(f"📊 Monitoraggio Parcheggi: {citta_scelta}")
+
+def load_data(citta):
+    if not os.path.exists("storico_parcheggi.db"):
+        return pd.DataFrame()
+    conn = sqlite3.connect("storico_parcheggi.db")
+    try:
+        df = pd.read_sql_query(f"SELECT * FROM storico WHERE citta = '{citta}'", conn)
+    except:
+        df = pd.DataFrame()
     conn.close()
     return df
 
-st.title("🚗 Dashboard Parcheggi Multi-Città")
-st.markdown("Dati in tempo reale da **Bologna, Torino e Firenze** (Bicchiere mezzo pieno)")
+df = load_data(citta_scelta)
 
-try:
-    df = load_data()
+if not df.empty:
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    parcheggio = st.selectbox("🎯 Seleziona struttura:", sorted(df['nome'].unique()))
     
-    if not df.empty:
-        # Filtro per Città
-        citta_scelta = st.sidebar.multiselect("Seleziona Città", options=df['citta'].unique(), default=df['citta'].unique())
-        df_filtrato = df[df['citta'].isin(citta_scelta)]
-
-        # --- SEZIONE INDICATORI (ULTIMO DATO) ---
-        st.subheader("📍 Stato Attuale")
-        cols = st.columns(3)
-        
-        # Prendiamo l'ultimo record per ogni parcheggio
-        ultimi = df_filtrato.sort_values('timestamp').groupby(['citta', 'nome']).last().reset_index()
-        
-        for i, row in ultimi.iterrows():
-            col_idx = i % 3
-            with cols[col_idx]:
-                liberi = row['liberi']
-                totali = row['totali'] if row['totali'] else (liberi + 10)
-                occupazione = round(((totali - liberi) / totali * 100), 1)
-                
-                st.metric(label=f"{row['citta']} - {row['nome']}", 
-                          value=f"{liberi} liberi", 
-                          delta=f"{occupazione}% occupato", delta_color="inverse")
-                st.progress(occupazione / 100)
-
-        # --- SEZIONE STORICO (GRAFICO) ---
-        st.divider()
-        st.subheader("📈 Storico ultime 24 ore")
-        
-        # Creazione grafico con Plotly
-        fig = px.line(df_filtrato, x='timestamp', y='liberi', color='nome',
-                      title="Andamento posti liberi",
-                      labels={'liberi': 'Posti Liberi', 'timestamp': 'Orario', 'nome': 'Parcheggio'},
-                      template="plotly_white")
-        
-        st.plotly_chart(fig, use_container_width=True)
-
-    else:
-        st.warning("Nessun dato trovato nel database. Aspetta il prossimo aggiornamento dello script!")
-
-except Exception as e:
-    st.error(f"Errore nel caricamento dei dati: {e}")
-    st.info("Assicurati che il file 'storico_parcheggi.db' sia presente nel repository.")
-
-st.sidebar.info(f"Ultimo controllo: {datetime.now().strftime('%H:%M:%S')}")
+    df_filtered = df[df['nome'] == parcheggio].sort_values('timestamp')
+    
+    # Grafico moderno ad area
+    fig = px.area(df_filtered, x='timestamp', y='liberi', 
+                  title=f"Posti Liberi: {parcheggio}",
+                  color_discrete_sequence=['#0083B0'])
+    
+    fig.update_layout(xaxis=dict(fixedrange=True), yaxis=dict(fixedrange=True))
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    
+    st.subheader("📝 Storico Ultime Rilevazioni")
+    st.dataframe(df_filtered.tail(10).sort_values('timestamp', ascending=False), 
+                 use_container_width=True, hide_index=True)
+else:
+    st.warning(f"⚠️ Dati per {citta_scelta} in fase di caricamento.")
+    st.info("Esegui 'Run workflow' su GitHub per popolare il database.")
