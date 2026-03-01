@@ -1,80 +1,71 @@
-import requests
-import sqlite3
-import xml.etree.ElementTree as ET
-from datetime import datetime
+def genera_pagina_web():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # Prendiamo l'ultimo inserimento per ogni parcheggio di ogni città
+    cursor.execute("""
+        SELECT citta, nome, liberi, totali, MAX(timestamp) 
+        FROM storico 
+        GROUP BY citta, nome
+    """)
+    rows = cursor.fetchall()
+    conn.close()
 
-DB_NAME = "storico_parcheggi.db"
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Stato Parcheggi - Bicchiere Mezzo Pieno</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body { font-family: sans-serif; display: flex; flex-wrap: wrap; justify-content: center; background: #f4f4f4; }
+            .card { background: white; margin: 10px; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+            h2 { color: #333; font-size: 1.2em; }
+        </style>
+    </head>
+    <body>
+    """
 
-def esegui_aggiornamento():
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
+    for row in rows:
+        citta, nome, liberi, totali, ts = row
+        # Logica bicchiere pieno: se totali è 0 o None, mettiamo 0%
+        occupati = (totali - liberi) if (totali and liberi is not None) else 0
+        percentuale = (occupati / totali * 100) if (totali and totali > 0) else 0
         
-        # Tabella aggiornata con la colonna 'totali'
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS storico (
-                citta TEXT,
-                nome TEXT, 
-                liberi INTEGER, 
-                totali INTEGER,
-                timestamp DATETIME
-            )
-        """)
-        
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        div_id = f"graph_{nome.replace(' ', '_')}"
+        html_content += f"""
+        <div class="card">
+            <h2>{citta} - {nome}</h2>
+            <div id="{div_id}"></div>
+            <p><small>Ultimo aggiornamento: {ts}</small></p>
+            <script>
+                var data = [{{
+                    domain: {{ x: [0, 1], y: [0, 1] }},
+                    value: {percentuale},
+                    title: {{ text: "Occupazione %" }},
+                    type: "indicator",
+                    mode: "gauge+number",
+                    gauge: {{
+                        axis: {{ range: [0, 100] }},
+                        bar: {{ color: "{'red' if percentuale > 80 else 'orange' if percentuale > 50 else 'green'}" }},
+                        steps: [
+                            {{ range: [0, 50], color: "#e8f5e9" }},
+                            {{ range: [50, 80], color: "#fff3e0" }},
+                            {{ range: [80, 100], color: "#ffebee" }}
+                        ]
+                    }}
+                }}];
+                Plotly.newPlot('{div_id}', data, {{ width: 250, height: 200, margin: {{ t: 0, b: 0 }} }});
+            </script>
+        </div>
+        """
 
-        # --- BOLOGNA ---
-        try:
-            url_bo = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
-            r_bo = requests.get(url_bo, timeout=10).json()
-            for rec in r_bo.get('results', []):
-                nome = rec.get('parcheggio')
-                liberi = rec.get('posti_liberi')
-                totali = rec.get('posti_totali') # Bologna fornisce i totali
-                if nome and liberi is not None:
-                    cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", 
-                                 ("Bologna", str(nome), int(liberi), totali, now))
-            print("✅ Bologna aggiornata")
-        except Exception as e:
-            print(f"❌ Errore Bologna: {e}")
+    html_content += "</body></html>"
+    
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("🖥️ Pagina web generata (index.html)")
 
-        # --- TORINO ---
-        try:
-            url_to = "http://opendata.5t.torino.it/get_pk"
-            r_to = requests.get(url_to, timeout=10)
-            root = ET.fromstring(r_to.content)
-            for pk in root.findall('Table'):
-                nome = pk.findtext('Name')
-                liberi = pk.findtext('Free')
-                totali = pk.findtext('Total') # Torino (5T) fornisce i totali
-                if nome and liberi is not None:
-                    cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", 
-                                 ("Torino", str(nome), int(liberi), int(totali) if totali else None, now))
-            print("✅ Torino aggiornata")
-        except Exception as e:
-            print(f"❌ Errore Torino: {e}")
-
-        # --- FIRENZE ---
-        try:
-            url_fi = "https://opendata.comune.fi.it/api/action/datastore_search?resource_id=07ccbe04-2041-4357-b501-8f52f3607062"
-            r_fi = requests.get(url_fi, timeout=10).json()
-            records = r_fi.get('result', {}).get('records', [])
-            for rec in records:
-                nome = rec.get('description') or rec.get('nome')
-                liberi = rec.get('free_spaces') or rec.get('posti_liberi')
-                totali = rec.get('total_spaces') or rec.get('posti_totali') # Firenze varia, cerchiamo entrambi
-                if nome and liberi is not None:
-                    cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", 
-                                 ("Firenze", str(nome), int(liberi), int(totali) if totali else None, now))
-            print("✅ Firenze aggiornata")
-        except Exception as e:
-            print(f"❌ Errore Firenze: {e}")
-
-        conn.commit()
-        conn.close()
-        
-    except Exception as e:
-        print(f"❌ Errore generale Database: {e}")
-
+# Ricordati di chiamarla nel main:
 if __name__ == "__main__":
     esegui_aggiornamento()
+    genera_pagina_web()
