@@ -1,54 +1,71 @@
 import requests
 import sqlite3
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime
+
+# CONFIGURAZIONE TESTATA AL 01/03/2026
+CITTÀ_CONFIG = {
+    "Bologna": {
+        "url": "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50",
+        "tipo": "json_v2",
+        "mapping": {"nome": "parcheggio", "liberi": "posti_liberi"}
+    },
+    "Firenze": {
+        # Endpoint specifico per i record in tempo reale di Firenze
+        "url": "https://opendata.comune.fi.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100",
+        "tipo": "json_v2",
+        "mapping": {"nome": "nome", "liberi": "posti_liberi"}
+    },
+    "Torino": {
+        # Usiamo l'endpoint JSON di Torino che è più stabile dell'XML
+        "url": "https://storing.5t.torino.it/fdt/extra/ParkingInformation.json",
+        "tipo": "json_torino"
+    }
+}
 
 DB_NAME = "storico_parcheggi.db"
 
 def esegui_aggiornamento():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS storico (
-            citta TEXT, nome TEXT, liberi INTEGER, totali INTEGER, timestamp DATETIME
-        )
-    """)
+    cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
+    
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Header fondamentale per simulare un browser ed evitare il blocco "403 Forbidden"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
-    # --- BOLOGNA ---
-    try:
-        r_bo = requests.get("https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50", timeout=15).json()
-        for rec in r_bo.get('results', []):
-            cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", 
-                         ("Bologna", rec.get('parcheggio'), rec.get('posti_liberi'), rec.get('posti_totali'), now))
-        print("✅ Bologna aggiornata")
-    except Exception as e: print(f"❌ Errore Bologna: {e}")
-
-    # --- TORINO (5T) ---
-    try:
-        r_to = requests.get("http://opendata.5t.torino.it/get_pk", timeout=15)
-        root = ET.fromstring(r_to.content)
-        for pk in root.findall('Table'):
-            nome = pk.findtext('Name')
-            liberi = pk.findtext('Free')
-            totali = pk.findtext('Total')
-            if nome and liberi is not None:
-                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", ("Torino", nome, int(liberi), int(totali) if totali else None, now))
-        print("✅ Torino aggiornata")
-    except Exception as e: print(f"❌ Errore Torino: {e}")
-
-    # --- FIRENZE ---
-    try:
-        # Usiamo l'endpoint specifico per i parcheggi in tempo reale
-        r_fi = requests.get("https://opendata.comune.fi.it/api/action/datastore_search?resource_id=07ccbe04-2041-4357-b501-8f52f3607062", timeout=15).json()
-        for rec in r_fi.get('result', {}).get('records', []):
-            nome = rec.get('description') or rec.get('nome')
-            liberi = rec.get('free_spaces') or rec.get('posti_liberi')
-            totali = rec.get('total_spaces') or rec.get('posti_totali')
-            if nome and liberi is not None:
-                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?, ?)", ("Firenze", nome, int(liberi), int(totali) if totali else None, now))
-        print("✅ Firenze aggiornata")
-    except Exception as e: print(f"❌ Errore Firenze: {e}")
+    for citta, info in CITTÀ_CONFIG.items():
+        try:
+            print(f"Tentativo su {citta}...")
+            r = requests.get(info["url"], headers=headers, timeout=20)
+            r.raise_for_status() # Blocca se c'è un errore di connessione
+            
+            count = 0
+            data = r.json()
+            
+            if info["tipo"] == "json_torino":
+                # Torino restituisce una lista semplice di oggetti
+                for pk in data:
+                    n = pk.get('name')
+                    l = pk.get('free_spaces')
+                    if n and l is not None:
+                        cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", (citta, str(n), int(l), now))
+                        count += 1
+            else:
+                # Bologna e Firenze usano il formato catalog/records
+                records = data.get('results', [])
+                for rec in records:
+                    n = rec.get(info["mapping"]["nome"])
+                    l = rec.get(info["mapping"]["liberi"])
+                    if n and l is not None:
+                        cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", (citta, str(n), int(l), now))
+                        count += 1
+            
+            print(f"✅ {citta}: Inseriti {count} record.")
+        except Exception as e:
+            print(f"❌ Errore {citta}: {e}")
 
     conn.commit()
     conn.close()
