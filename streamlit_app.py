@@ -1,101 +1,69 @@
 import streamlit as st
-import pandas as pd
 import sqlite3
+import pandas as pd
 import plotly.express as px
-import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# --- CONFIGURAZIONE PROFESSIONALE ---
-st.set_page_config(
-    page_title="ParkMonitor Pro | Italia",
-    page_icon="🅿️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Monitoraggio Parcheggi", layout="wide")
 
-# --- STILE CSS PERSONALIZZATO (Look & Feel Professionale) ---
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .stPlotlyChart { background-color: #ffffff; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    h1 { color: #1e293b; font-weight: 800; }
-    .sidebar-text { font-size: 14px; color: #64748b; }
-    </style>
-    """, unsafe_allow_html=True)
+DB_NAME = "storico_parcheggi.db"
 
-# --- LOGICA CARICAMENTO DATI ---
-def load_data(citta):
-    if not os.path.exists("storico_parcheggi.db"):
-        return pd.DataFrame()
-    conn = sqlite3.connect("storico_parcheggi.db")
-    query = f"SELECT * FROM storico WHERE citta = '{citta}'"
-    try:
-        df = pd.read_sql_query(query, conn)
-    except:
-        df = pd.DataFrame()
+def load_data():
+    conn = sqlite3.connect(DB_NAME)
+    # Carichiamo le ultime 24 ore di dati
+    query = "SELECT * FROM storico WHERE timestamp > ?"
+    ieri = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+    df = pd.read_sql_query(query, conn, params=(ieri,))
     conn.close()
     return df
 
-# --- SIDEBAR MODERNA ---
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2991/2991231.png", width=80) # Icona placeholder
-    st.title("Navigation")
-    citta_scelta = st.selectbox("🏙️ Seleziona Città", ["Bologna", "Milano", "Torino", "Firenze"])
-    st.markdown("---")
-    st.markdown("<p class='sidebar-text'>ParkMonitor Pro v2.0<br>Aggiornamenti ogni 30 min</p>", unsafe_allow_html=True)
-    st.link_button("☕ Supporta il Progetto", "https://www.buymeacoffee.com")
+st.title("🚗 Dashboard Parcheggi Multi-Città")
+st.markdown("Dati in tempo reale da **Bologna, Torino e Firenze** (Bicchiere mezzo pieno)")
 
-# --- DASHBOARD PRINCIPALE ---
-df = load_data(citta_scelta)
-
-if not df.empty:
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    lista_parcheggi = sorted(df['nome'].unique())
+try:
+    df = load_data()
     
-    col_t1, col_t2 = st.columns([2, 1])
-    with col_t1:
-        st.title(f"Dashboard {citta_scelta}")
-    with col_t2:
-        parcheggio = st.selectbox("🎯 Seleziona Struttura", lista_parcheggi)
+    if not df.empty:
+        # Filtro per Città
+        citta_scelta = st.sidebar.multiselect("Seleziona Città", options=df['citta'].unique(), default=df['citta'].unique())
+        df_filtrato = df[df['citta'].isin(citta_scelta)]
 
-    # Filtro dati
-    df_p = df[df['nome'] == parcheggio].sort_values('timestamp')
-    
-    if not df_p.empty:
-        # --- SEZIONE METRICHE (KPI CARDS) ---
-        ultimo_dato = df_p.iloc[-1]
-        precedente = df_p.iloc[-2] if len(df_p) > 1 else ultimo_dato
-        delta_posti = int(ultimo_dato['liberi'] - precedente['liberi'])
-
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Posti Attuali", f"{ultimo_dato['liberi']}", delta=f"{delta_posti} vs 30m fa")
-        m2.metric("Stato", "Disponibile" if ultimo_dato['liberi'] > 10 else "Quasi Pieno", 
-                  delta_color="normal" if ultimo_dato['liberi'] > 10 else "inverse")
-        m3.metric("Ultimo Check", ultimo_dato['timestamp'].strftime("%H:%M"))
-
-        st.markdown("### 📈 Andamento Occupazione")
+        # --- SEZIONE INDICATORI (ULTIMO DATO) ---
+        st.subheader("📍 Stato Attuale")
+        cols = st.columns(3)
         
-        # --- GRAFICO AREA PROFESSIONALE ---
-        fig = px.area(df_p, x='timestamp', y='liberi',
-                      color_discrete_sequence=['#3b82f6'], # Blu moderno
-                      labels={'liberi': 'Posti Disponibili', 'timestamp': 'Orario'})
+        # Prendiamo l'ultimo record per ogni parcheggio
+        ultimi = df_filtrato.sort_values('timestamp').groupby(['citta', 'nome']).last().reset_index()
         
-        fig.update_layout(
-            margin=dict(l=20, r=20, t=20, b=20),
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9"),
-            hovermode="x unified"
-        )
+        for i, row in ultimi.iterrows():
+            col_idx = i % 3
+            with cols[col_idx]:
+                liberi = row['liberi']
+                totali = row['totali'] if row['totali'] else (liberi + 10)
+                occupazione = round(((totali - liberi) / totali * 100), 1)
+                
+                st.metric(label=f"{row['citta']} - {row['nome']}", 
+                          value=f"{liberi} liberi", 
+                          delta=f"{occupazione}% occupato", delta_color="inverse")
+                st.progress(occupazione / 100)
+
+        # --- SEZIONE STORICO (GRAFICO) ---
+        st.divider()
+        st.subheader("📈 Storico ultime 24 ore")
+        
+        # Creazione grafico con Plotly
+        fig = px.line(df_filtrato, x='timestamp', y='liberi', color='nome',
+                      title="Andamento posti liberi",
+                      labels={'liberi': 'Posti Liberi', 'timestamp': 'Orario', 'nome': 'Parcheggio'},
+                      template="plotly_white")
+        
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- TABELLA E DETTAGLI ---
-        with st.expander("📂 Visualizza Dati Storici Completi"):
-            st.dataframe(df_p.sort_values('timestamp', ascending=False), 
-                         use_container_width=True, hide_index=True)
     else:
-        st.info("Nessun dato disponibile per questo parcheggio.")
-else:
-    st.error(f"Nessun dato trovato per {citta_scelta}. Verifica l'Action su GitHub.")
+        st.warning("Nessun dato trovato nel database. Aspetta il prossimo aggiornamento dello script!")
+
+except Exception as e:
+    st.error(f"Errore nel caricamento dei dati: {e}")
+    st.info("Assicurati che il file 'storico_parcheggi.db' sia presente nel repository.")
+
+st.sidebar.info(f"Ultimo controllo: {datetime.now().strftime('%H:%M:%S')}")
