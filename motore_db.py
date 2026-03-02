@@ -2,8 +2,7 @@ import requests
 import sqlite3
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import time
 
 CITTÀ_CONFIG = {
     "Bologna": {
@@ -25,25 +24,22 @@ def esegui_aggiornamento():
     
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Configurazione Sessione Professionale
+    # --- CONFIGURAZIONE PROFESSIONALE ANTI-BLOCCO ---
     session = requests.Session()
-    retry = Retry(connect=3, backoff_factor=0.5)
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-
-    # Questo set di dati è quello "pronto" che imita Chrome al 100%
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/xml,application/json,text/html,application/xhtml+xml",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8",
-        "Referer": "https://www.google.it/",
-        "DNT": "1"
+        "Referer": "https://www.google.it/", # Fa credere al server che arriviamo da Google
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
     })
 
     for citta, info in CITTÀ_CONFIG.items():
         try:
             print(f"📡 Tentativo 'Human-Like' su {citta}...")
+            time.sleep(2) # Pausa strategica per non sembrare un bot velocissimo
+            
             r = session.get(info["url"], timeout=30)
             r.raise_for_status()
             
