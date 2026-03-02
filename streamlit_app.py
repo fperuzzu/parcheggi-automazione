@@ -4,44 +4,38 @@ import sqlite3
 import plotly.express as px
 import os
 
-st.set_page_config(page_title="ParkMonitor Italia", layout="wide", page_icon="🅿️")
+st.set_page_config(page_title="Monitor Parcheggi", layout="wide")
 
-# Sidebar con le città funzionanti
-st.sidebar.header("📍 Selezione Città")
-citta_scelta = st.sidebar.selectbox("Scegli la città da monitorare:", ["Bologna", "Roma", "Bolzano"])
+st.title("🅿️ Monitoraggio Parcheggi Italia")
 
-st.title(f"📊 Monitoraggio Parcheggi: {citta_scelta}")
-
-def load_data(citta):
+def get_data():
     if not os.path.exists("storico_parcheggi.db"):
         return pd.DataFrame()
     conn = sqlite3.connect("storico_parcheggi.db")
     try:
-        df = pd.read_sql_query(f"SELECT * FROM storico WHERE citta = '{citta}'", conn)
+        df = pd.read_sql_query("SELECT * FROM storico", conn)
     except:
         df = pd.DataFrame()
     conn.close()
     return df
 
-df = load_data(citta_scelta)
+df_full = get_data()
 
-if not df.empty:
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    parcheggio = st.selectbox("🎯 Seleziona struttura:", sorted(df['nome'].unique()))
+if not df_full.empty:
+    # Sidebar dinamica
+    citta_disponibili = sorted(df_full['citta'].unique())
+    citta_scelta = st.sidebar.selectbox("📍 Seleziona Città", citta_disponibili)
     
-    df_filtered = df[df['nome'] == parcheggio].sort_values('timestamp')
+    df = df_full[df_full['citta'] == citta_scelta]
     
-    # Grafico moderno ad area
-    fig = px.area(df_filtered, x='timestamp', y='liberi', 
-                  title=f"Posti Liberi: {parcheggio}",
-                  color_discrete_sequence=['#0083B0'])
+    # Selettore Parcheggio
+    parcheggio = st.selectbox("🎯 Scegli Parcheggio", sorted(df['nome'].unique()))
     
-    fig.update_layout(xaxis=dict(fixedrange=True), yaxis=dict(fixedrange=True))
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    df_plot = df[df['nome'] == parcheggio].sort_values('timestamp')
     
-    st.subheader("📝 Storico Ultime Rilevazioni")
-    st.dataframe(df_filtered.tail(10).sort_values('timestamp', ascending=False), 
-                 use_container_width=True, hide_index=True)
+    if not df_plot.empty:
+        fig = px.line(df_plot, x='timestamp', y='liberi', title=f"Posti liberi a {parcheggio}")
+        st.plotly_chart(fig, use_container_width=True)
+        st.table(df_plot.tail(5))
 else:
-    st.warning(f"⚠️ Dati per {citta_scelta} in fase di caricamento.")
-    st.info("Esegui 'Run workflow' su GitHub per popolare il database.")
+    st.error("Database vuoto. Attendi il completamento di GitHub Actions.")
