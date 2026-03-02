@@ -1,61 +1,48 @@
-import requests
+import streamlit as st
+import pandas as pd
 import sqlite3
-import xml.etree.ElementTree as ET
-from datetime import datetime
-import re
+import plotly.express as px
+import os
 
-URL_TORINO_PROXY = "https://script.google.com/macros/s/AKfycbxST_tjOBH2v3ERqb_dif6kazstQr8qZkwwKnrgGtfPkpjkqARpaiwYIq-f7epgVNz_/exec"
-URL_BOLOGNA = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
+st.set_page_config(page_title="Monitor Parcheggi", layout="wide")
+st.title("📊 Monitoraggio Parcheggi Italia")
 
-DB_NAME = "storico_parcheggi.db"
-
-def esegui_aggiornamento():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
-    
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # --- TORINO (con Pulizia Dati) ---
-    try:
-        print("📡 Recupero Torino via Proxy...")
-        r = requests.get(URL_TORINO_PROXY, timeout=30)
-        r.raise_for_status()
-        
-        # Pulizia: rimuoviamo eventuali dichiarazioni XML duplicate o spazi strani
-        xml_data = r.text.strip()
-        if not xml_data.startswith('<'):
-             xml_data = xml_data[xml_data.find('<'):]
-             
-        root = ET.fromstring(xml_data)
-        count_to = 0
-        for pk in root.findall('.//stop'): # Cerca in tutto l'albero
-            n, l = pk.get('name'), pk.get('free_spaces')
-            if n and l is not None:
-                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Torino", str(n), int(l), now))
-                count_to += 1
-        print(f"✅ Torino: Inseriti {count_to} record.")
-    except Exception as e:
-        print(f"❌ Errore Torino (XML): {e}")
-
-    # --- BOLOGNA ---
-    try:
-        print("📡 Recupero Bologna...")
-        r = requests.get(URL_BOLOGNA, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-        count_bo = 0
-        for rec in data.get('results', []):
-            n, l = rec.get('parcheggio'), rec.get('posti_liberi')
-            if n and l is not None:
-                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Bologna", str(n), int(l), now))
-                count_bo += 1
-        print(f"✅ Bologna: Inseriti {count_bo} record.")
-    except Exception as e:
-        print(f"❌ Errore Bologna: {e}")
-
-    conn.commit()
+def load_data():
+    if not os.path.exists("storico_parcheggi.db"):
+        return pd.DataFrame()
+    conn = sqlite3.connect("storico_parcheggi.db")
+    df = pd.read_sql_query("SELECT * FROM storico", conn)
     conn.close()
+    return df
 
-if __name__ == "__main__":
-    esegui_aggiornamento()
+df_all = load_data()
+
+if not df_all.empty:
+    df_all['timestamp'] = pd.to_datetime(df_all['timestamp'])
+    
+    citta_list = sorted(df_all['citta'].unique())
+    citta_scelta = st.sidebar.selectbox("📍 Seleziona Città", citta_list)
+    
+    df_citta = df_all[df_all['citta'] == citta_scelta]
+    parcheggio = st.selectbox("🎯 Seleziona Parcheggio", sorted(df_citta['nome'].unique()))
+    
+    df_plot = df_citta[df_citta['nome'] == parcheggio].sort_values('timestamp')
+    
+    if not df_plot.empty:
+        fig = px.line(df_plot, x='timestamp', y='liberi', markers=True, 
+                      title=f"Disponibilità: {parcheggio}")
+        
+        # FIX ASSE X: Allarghiamo lo zoom se c'è poca storia
+        if len(df_plot) < 5:
+            t_center = df_plot['timestamp'].iloc[-1]
+            fig.update_xaxes(range=[t_center - pd.Timedelta(hours=2), t_center + pd.Timedelta(hours=2)])
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        col1, col2 = st.columns(2)
+        col1.metric("Stato Attuale", f"{df_plot.iloc[-1]['liberi']} posti")
+        col2.metric("Ultimo Aggiornamento", df_plot.iloc[-1]['timestamp'].strftime("%H:%M:%S"))
+        
+        st.dataframe(df_plot.sort_values('timestamp', ascending=False), use_container_width=True)
+else:
+    st.warning("Database vuoto. Esegui il workflow su GitHub Actions.")
