@@ -28,18 +28,19 @@ if not df_all.empty:
     
     df_plot = df_citta[df_citta['nome'] == parcheggio].sort_values('timestamp')
     
-    # FIX GRAFICO: Serve almeno 2 punti per distendere l'asse temporale
-    if len(df_plot) > 1:
+    if not df_plot.empty:
+        # GRAFICO CON FIX PER PUNTO SINGOLO
         fig = px.line(df_plot, x='timestamp', y='liberi', markers=True, 
                       title=f"Disponibilità: {parcheggio}")
-        # Forza l'asse X a comportarsi come una linea temporale
-        fig.update_xaxes(type='date')
+        
+        # Se abbiamo un solo punto, allarghiamo l'asse X di 2 ore totali
+        if len(df_plot) == 1:
+            t_min = df_plot['timestamp'].min() - pd.Timedelta(hours=1)
+            t_max = df_plot['timestamp'].max() + pd.Timedelta(hours=1)
+            fig.update_xaxes(range=[t_min, t_max])
+        
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("📈 Dati storici in accumulo. Il grafico apparirà non appena avrai almeno due rilevazioni (attendi 30 min o rilancia il workflow).")
-        st.metric(label="Posti liberi attuali", value=f"{df_plot.iloc[-1]['liberi']} posti")
-
-    st.subheader("📋 Storico Rilevazioni")
-    st.dataframe(df_plot.sort_values('timestamp', ascending=False), use_container_width=True, hide_index=True)
+        st.metric("Posti liberi attuali", f"{df_plot.iloc[-1]['liberi']}")
+        st.dataframe(df_plot.sort_values('timestamp', ascending=False), use_container_width=True)
 else:
-    st.warning("Esegui il workflow su GitHub per caricare i dati.")
+    st.warning("Database vuoto. Esegui il workflow su GitHub Actions.")
