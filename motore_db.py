@@ -2,18 +2,10 @@ import requests
 import sqlite3
 import xml.etree.ElementTree as ET
 from datetime import datetime
-import time
 
-CITTÀ_CONFIG = {
-    "Bologna": {
-        "url": "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50",
-        "tipo": "json"
-    },
-    "Torino": {
-        "url": "http://opendata.5t.torino.it/get_pk",
-        "tipo": "xml_torino"
-    }
-}
+# URL del tuo Proxy Google (Testato e Funzionante)
+URL_TORINO_PROXY = "https://script.google.com/macros/s/AKfycbxST_tjOBH2v3ERqb_dif6kazstQr8qZkwwKnrgGtfPkpjkqARpaiwYIq-f7epgVNz_/exec"
+URL_BOLOGNA = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
 
 DB_NAME = "storico_parcheggi.db"
 
@@ -23,45 +15,38 @@ def esegui_aggiornamento():
     cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
     
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # --- CONFIGURAZIONE PROFESSIONALE ANTI-BLOCCO ---
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8",
-        "Referer": "https://www.google.it/", # Fa credere al server che arriviamo da Google
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1"
-    })
 
-    for citta, info in CITTÀ_CONFIG.items():
-        try:
-            print(f"📡 Tentativo 'Human-Like' su {citta}...")
-            time.sleep(2) # Pausa strategica per non sembrare un bot velocissimo
-            
-            r = session.get(info["url"], timeout=30)
-            r.raise_for_status()
-            
-            count = 0
-            if info["tipo"] == "xml_torino":
-                root = ET.fromstring(r.content)
-                for pk in root.findall('stop'):
-                    n, l = pk.get('name'), pk.get('free_spaces')
-                    if n and l is not None:
-                        cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", (citta, str(n), int(l), now))
-                        count += 1
-            else:
-                data = r.json()
-                for rec in data.get('results', []):
-                    n, l = rec.get('parcheggio'), rec.get('posti_liberi')
-                    if n and l is not None:
-                        cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", (citta, str(n), int(l), now))
-                        count += 1
-            
-            print(f"✅ {citta}: Inseriti {count} record.")
-        except Exception as e:
-            print(f"❌ Errore {citta}: {e}")
+    # --- TORINO (via Google Proxy) ---
+    try:
+        print("📡 Recupero Torino via Google Proxy...")
+        r = requests.get(URL_TORINO_PROXY, timeout=30)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        count_to = 0
+        for pk in root.findall('stop'):
+            n, l = pk.get('name'), pk.get('free_spaces')
+            if n and l is not None:
+                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Torino", str(n), int(l), now))
+                count_to += 1
+        print(f"✅ Torino: Inseriti {count_to} record.")
+    except Exception as e:
+        print(f"❌ Errore Torino: {e}")
+
+    # --- BOLOGNA ---
+    try:
+        print("📡 Recupero Bologna...")
+        r = requests.get(URL_BOLOGNA, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        count_bo = 0
+        for rec in data.get('results', []):
+            n, l = rec.get('parcheggio'), rec.get('posti_liberi')
+            if n and l is not None:
+                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Bologna", str(n), int(l), now))
+                count_bo += 1
+        print(f"✅ Bologna: Inseriti {count_bo} record.")
+    except Exception as e:
+        print(f"❌ Errore Bologna: {e}")
 
     conn.commit()
     conn.close()
