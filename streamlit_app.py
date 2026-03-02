@@ -4,7 +4,7 @@ import sqlite3
 import plotly.express as px
 import os
 
-st.set_page_config(page_title="ParkMonitor Italia", layout="wide", page_icon="🅿️")
+st.set_page_config(page_title="ParkMonitor Pro", layout="wide", page_icon="🅿️")
 
 st.title("🅿️ Monitoraggio Parcheggi Italia")
 
@@ -24,7 +24,7 @@ df_all = load_data()
 if not df_all.empty:
     df_all['timestamp'] = pd.to_datetime(df_all['timestamp'])
     
-    # Sidebar dinamica basata sui dati reali nel DB
+    # Sidebar dinamica: mostra solo le città che hanno dati nel DB
     citta_list = sorted(df_all['citta'].unique())
     citta_scelta = st.sidebar.selectbox("📍 Seleziona Città", citta_list)
     
@@ -33,19 +33,18 @@ if not df_all.empty:
     
     df_plot = df_citta[df_citta['nome'] == parcheggio].sort_values('timestamp')
     
-    # LOGICA GRAFICO: Serve almeno 2 punti per una linea
+    # GESTIONE GRAFICO (Evita la barra fissa)
     if len(df_plot) > 1:
-        fig = px.line(df_plot, x='timestamp', y='liberi', 
-                      title=f"Andamento Posti Liberi: {parcheggio}",
-                      markers=True)
-        # Forza l'asse X a mostrare un intervallo temporale sensato
+        fig = px.line(df_plot, x='timestamp', y='liberi', markers=True, 
+                      title=f"Andamento: {parcheggio}")
+        # Forza l'asse X a comportarsi come una linea temporale
         fig.update_xaxes(type='date')
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("📈 Dati insufficienti per il grafico. L'app ha bisogno di almeno due rilevazioni (attendi il prossimo aggiornamento tra 30 minuti).")
-        st.metric("Posti liberi attuali", df_plot.iloc[0]['liberi'] if not df_plot.empty else "N/A")
+        st.info("📈 Dati storici in accumulo. Ecco la prima rilevazione effettuata:")
+        st.metric(f"Posti Liberi a {parcheggio}", f"{df_plot.iloc[-1]['liberi']} posti")
 
-    st.subheader("📋 Storico Dati")
+    st.subheader("📋 Log Dati")
     st.dataframe(df_plot.sort_values('timestamp', ascending=False), use_container_width=True, hide_index=True)
 else:
-    st.warning("Database in fase di popolamento. Attendi il primo ciclo di GitHub Actions.")
+    st.warning("Database in attesa di dati. Avvia il workflow su GitHub Actions.")
