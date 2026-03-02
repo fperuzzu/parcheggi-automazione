@@ -1,56 +1,36 @@
 import requests
 import sqlite3
-import re
 from datetime import datetime
 
-URL_TORINO_PROXY = "https://script.google.com/macros/s/AKfycbwi1wd9cwc9qH1qlir9nTBi9gbK982e6j2O4obBgoHC0yhlmYsxWTylqZDcZvTdTII7/exec"
+# L'unica certezza: Bologna
 URL_BOLOGNA = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=50"
 DB_NAME = "storico_parcheggi.db"
 
 def esegui_aggiornamento():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    # Creiamo la tabella se non esiste
     cursor.execute("CREATE TABLE IF NOT EXISTS storico (citta TEXT, nome TEXT, liberi INTEGER, timestamp DATETIME)")
+    
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # --- TORINO ---
-    try:
-        print("📡 Recupero Torino via Proxy...")
-        r = requests.get(URL_TORINO_PROXY, timeout=30)
-        testo = r.text
-        
-        # Questa Regex è un "carro armato": cerca Name="QUALSIASI" e Free="NUMERO"
-        # anche se ci sono spazi, ritorni a capo o altri attributi in mezzo.
-        matches = re.findall(r'Name\s*=\s*"([^"]+)"[^>]*?Free\s*=\s*"(\d+)"', testo, re.IGNORECASE | re.DOTALL)
-        
-        count_to = 0
-        for nome, liberi in matches:
-            # Puliamo il nome da eventuali spazi bianchi ai lati
-            nome_pulito = str(nome).strip()
-            cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Torino", nome_pulito, int(liberi), now))
-            count_to += 1
-            
-        if count_to > 0:
-            print(f"✅ Torino: Inseriti {count_to} record.")
-        else:
-            print("⚠️ Torino: Nessun dato estratto. Verifico formato testo...")
-            print(f"DEBUG: Primi 200 caratteri: {testo[:200]}")
-    except Exception as e:
-        print(f"❌ Errore Torino: {e}")
-
-    # --- BOLOGNA ---
     try:
         print("📡 Recupero Bologna...")
-        r = requests.get(URL_BOLOGNA, timeout=30)
+        r = requests.get(URL_BOLOGNA, timeout=20)
+        r.raise_for_status()
         data = r.json()
-        count_bo = 0
+        
+        count = 0
         for rec in data.get('results', []):
-            n = rec.get('parcheggio')
-            l = rec.get('posti_liberi')
-            if n and l is not None:
-                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Bologna", str(n), int(l), now))
-                count_bo += 1
-        print(f"✅ Bologna: Inseriti {count_bo} record.")
+            nome = rec.get('parcheggio')
+            liberi = rec.get('posti_liberi')
+            
+            if nome and liberi is not None:
+                cursor.execute("INSERT INTO storico VALUES (?, ?, ?, ?)", ("Bologna", str(nome), int(liberi), now))
+                count += 1
+        
+        print(f"✅ Bologna: Inseriti {count} record.")
+        
     except Exception as e:
         print(f"❌ Errore Bologna: {e}")
 
