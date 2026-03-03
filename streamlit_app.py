@@ -9,47 +9,71 @@ from datetime import datetime, timedelta
 # Configurazione Pagina
 st.set_page_config(page_title="PeruLabTech | Smart City", layout="wide")
 
-# --- DATABASE COORDINATE (MAPPING) ---
-COORDINATE = {
-    "Piazza VIII Agosto": [44.500, 11.344],
-    "Riva Reno": [44.498, 11.336],
-    "Autostazione": [44.505, 11.345],
-    "Bolzano": [45.074, 7.666],
-    "Vittorio Veneto": [45.063, 7.689],
-    "Fortezza Fiera": [43.782, 11.248],
-    "Stazione Binario 16": [43.785, 11.245]
-}
+# --- TRADUZIONE GIORNI ---
+GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
 
-# --- CSS EXPERT UI (MOBILE OPTIMIZED) ---
+# --- GESTIONE STATO DELLA DATA (NAVIGAZIONE FRECCE) ---
+if 'data_attiva' not in st.session_state:
+    st.session_state.data_attiva = datetime.now().date()
+
+def cambia_giorno(delta):
+    st.session_state.data_attiva += timedelta(days=delta)
+
+# --- CSS EXPERT UI ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;600&display=swap');
+    
     .stApp { background: #0d1117; color: #e6edf3; }
-    
-    /* FIX MOBILE: Rimosso spazio bianco in alto */
-    .block-container { padding-top: 0rem !important; padding-bottom: 1rem !important; }
-    
-    .day-badge {
-        background: rgba(0, 210, 255, 0.1); color: #58a6ff;
-        padding: 5px 12px; border-radius: 8px; font-weight: 600;
-        font-size: 0.8rem; border: 1px solid rgba(88, 166, 255, 0.2);
-        margin-top: 10px; margin-bottom: 20px; display: inline-block;
+    .block-container { padding-top: 0rem !important; }
+
+    /* Titolo Stilizzato */
+    .main-title {
+        font-family: 'Orbitron', sans-serif;
+        background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-top: 10px;
+        letter-spacing: 2px;
+    }
+    .sub-title {
+        font-family: 'Inter', sans-serif;
+        text-align: center;
+        color: #8b949e;
+        font-size: 0.8rem;
+        margin-bottom: 20px;
+        text-transform: uppercase;
     }
 
+    /* Navigatore Giorni */
+    .nav-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 30px;
+        background: rgba(255,255,255,0.03);
+        padding: 10px;
+        border-radius: 50px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .day-display {
+        text-align: center;
+        min-width: 150px;
+    }
+    .day-name { color: #00d2ff; font-weight: 700; font-size: 1.1rem; }
+    .day-date { color: #8b949e; font-size: 0.8rem; }
+
+    /* Cards */
     .parking-card {
         background: #161b22; border: 1px solid #30363d;
         border-radius: 12px; padding: 18px; margin-bottom: 10px;
     }
-    .parking-name { color: #f0f6fc; font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; }
-    .stat-main { font-size: 1.8rem; font-weight: 800; color: #00d2ff; }
-    .stat-sub { color: #8b949e; font-size: 0.85rem; }
-    
-    .nav-btn {
-        display: block; background: #238636; color: white !important;
-        text-align: center; padding: 10px; border-radius: 6px;
-        text-decoration: none; font-weight: bold; margin-top: 10px;
-    }
+    .parking-name { color: #f0f6fc; font-size: 1rem; font-weight: 700; }
+    .stat-main { font-size: 1.6rem; font-weight: 800; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -64,85 +88,80 @@ def get_data(selected_date):
         return df
     except: return pd.DataFrame()
 
-# --- SIDEBAR ---
-LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
-st.sidebar.image(LOGO_URL, use_container_width=True)
-data_scelta = st.sidebar.date_input("Seleziona Giorno", datetime.now())
+# --- HEADER STILIZZATO ---
+st.markdown("<div class='main-title'>PERULABTECH</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Smart City Parking Control Room</div>", unsafe_allow_html=True)
 
-df = get_data(data_scelta)
+# --- NAVIGATORE A FRECCE ---
+col_prev, col_day, col_next = st.columns([1, 2, 1])
 
-# --- HEADER ---
-st.markdown(f"<div class='day-badge'>PERULABTECH MONITORING • {data_scelta.strftime('%d.%m.%Y')}</div>", unsafe_allow_html=True)
+with col_prev:
+    st.markdown("<div style='text-align:right;'>", unsafe_allow_html=True)
+    if st.button("◀ Prev"):
+        cambia_giorno(-1)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with col_day:
+    curr_date = st.session_state.data_attiva
+    giorno_sett = GIORNI[curr_date.weekday()]
+    st.markdown(f"""
+        <div class="day-display">
+            <div class="day-name">{giorno_sett.upper()}</div>
+            <div class="day-date">{curr_date.strftime('%d %B %Y')}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col_next:
+    if st.button("Next ▶"):
+        cambia_giorno(1)
+
+# --- LOGICA DATI ---
+df = get_data(st.session_state.data_attiva)
 
 if not df.empty:
     citta_presenti = sorted(df['citta'].unique())
-    sel_citta = st.sidebar.multiselect("Filtra Città", citta_presenti, default=citta_presenti)
+    sel_citta = st.sidebar.multiselect("Città", citta_presenti, default=citta_presenti)
     df_f = df[df['citta'].isin(sel_citta)]
     
-    # --- 1. SCHEDE DATI (BICCHIERE MEZZO PIENO) ---
+    # 1. SCHEDE REAL TIME (BICCHIERE MEZZO PIENO)
     ultimi = df_f.sort_values('timestamp').groupby(['citta', 'nome']).last().reset_index()
     
-    st.markdown("<div style='color:#8b949e; font-size:0.8rem; font-weight:600; margin-bottom:10px;'>STATO ATTUALE</div>", unsafe_allow_html=True)
-    
+    st.markdown("<br><div style='color:#8b949e; font-size:0.7rem; font-weight:600;'>LIVE STATUS</div>", unsafe_allow_html=True)
     cols = st.columns(3)
     for idx, row in enumerate(ultimi.itertuples()):
         with cols[idx % 3]:
             lib = row.liberi
             tot = row.totali if (hasattr(row, 'totali') and row.totali > 0) else (lib + 20)
-            
-            # Calcolo occupazione per la barra (il bicchiere si riempie man mano che i posti finiscono)
-            occupati = tot - lib
-            perc_occ = (occupati / tot) if tot > 0 else 0
-            
-            # Colore dinamico per il numero dei liberi
-            color_stat = "#3fb950" if (lib/tot) > 0.4 else "#d29922" if (lib/tot) > 0.15 else "#f85149"
+            perc_occ = (tot - lib) / tot if tot > 0 else 0
+            color = "#3fb950" if (lib/tot) > 0.4 else "#d29922" if (lib/tot) > 0.15 else "#f85149"
             
             st.markdown(f"""
                 <div class="parking-card">
                     <div style="color:#8b949e; font-size:0.7rem; text-transform:uppercase;">{row.citta}</div>
                     <div class="parking-name">{row.nome}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <span class="stat-main" style="color:{color_stat};">{lib}</span>
-                        <span class="stat-sub">liberi su {tot}</span>
+                        <span class="stat-main" style="color:{color};">{lib}</span>
+                        <span style="color:#8b949e; font-size:0.8rem;">/ {tot} totali</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
             st.progress(min(max(perc_occ, 0.0), 1.0))
 
-    # --- 2. MAPPA SMART (SPOSTATA DOPO LE SCHEDE) ---
-    st.markdown("<br><div style='color:#8b949e; font-size:0.8rem; font-weight:600; margin-bottom:10px;'>MAPPA NAVIGAZIONE</div>", unsafe_allow_html=True)
-    
+    # 2. MAPPA
+    st.markdown("<br><div style='color:#8b949e; font-size:0.7rem; font-weight:600;'>SPATIAL VIEW</div>", unsafe_allow_html=True)
     m = folium.Map(location=[44.494, 11.342], zoom_start=12, tiles="cartodbpositron")
-    
     for row in ultimi.itertuples():
-        coords = COORDINATE.get(row.nome, [44.49, 11.34])
-        nav_url = f"https://www.google.com/maps/dir/?api=1&destination={coords[0]},{coords[1]}"
-        
-        popup_html = f"""
-        <div style='font-family:sans-serif; width:160px;'>
-            <b style='font-size:14px;'>{row.nome}</b><br>
-            <span style='color:#666;'>Liberi: {row.liberi}</span><br>
-            <a href='{nav_url}' target='_blank' class='nav-btn' style='color:white; background:#238636; padding:8px; display:block; text-align:center; border-radius:5px; text-decoration:none; margin-top:8px;'>NAVIGA ORA</a>
-        </div>
-        """
-        folium.Marker(
-            location=coords, 
-            popup=folium.Popup(popup_html, max_width=200),
-            icon=folium.Icon(color='blue' if row.liberi > 10 else 'red', icon='car', prefix='fa')
-        ).add_to(m)
-    
-    folium_static(m, width=700, height=350)
+        # Qui potresti aggiungere un dizionario coordinate come visto prima
+        folium.Marker(location=[44.49, 11.34], popup=f"{row.nome}: {row.liberi} liberi").add_to(m)
+    folium_static(m, width=1000, height=300)
 
-    # --- 3. GRAFICO TREND ---
-    st.markdown("<br><div style='color:#8b949e; font-size:0.8rem; font-weight:600;'>TREND GIORNALIERO</div>", unsafe_allow_html=True)
-    
+    # 3. GRAFICO TREND (SCALA FISSA E LEGENDA WOW)
+    st.markdown("<br><div style='color:#8b949e; font-size:0.7rem; font-weight:600;'>24H OCCUPANCY TREND</div>", unsafe_allow_html=True)
     fig = go.Figure()
-    max_val = 0
+    max_val = df_f['totali'].max() if 'totali' in df_f.columns else df_f['liberi'].max()
+    
     for n in df_f['nome'].unique():
         p = df_f[df_f['nome'] == n].sort_values('timestamp')
-        current_max = p['totali'].max() if 'totali' in p.columns else p['liberi'].max()
-        if current_max > max_val: max_val = current_max
-        
         fig.add_trace(go.Scatter(
             x=p['timestamp'], y=p['liberi'], name=n, 
             mode='lines', line=dict(width=3, shape='spline'), fill='tozeroy'
@@ -152,13 +171,14 @@ if not df.empty:
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=0, r=0, t=10, b=0), height=350,
         xaxis=dict(showgrid=False, color="#8b949e"),
-        yaxis=dict(gridcolor='#30363d', color="#8b949e", range=[0, max_val + 10]),
+        yaxis=dict(gridcolor='#30363d', color="#8b949e", range=[0, (max_val or 100) + 20]),
         legend=dict(
             orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5, 
-            font=dict(color="#f0f6fc", size=10) # Legenda chiara e leggibile
+            font=dict(color="#f0f6fc", size=10)
         )
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
 else:
-    st.info("Nessun dato trovato per questa data. Controlla lo storico dei giorni precedenti.")
+    st.warning(f"Nessun dato archiviato per {st.session_state.data_attiva.strftime('%d/%m/%Y')}")
+
+st.sidebar.image(LOGO_URL, use_container_width=True)
