@@ -14,7 +14,7 @@ LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/mai
 DB_NAME = "storico_parcheggi.db"
 GIORNI_ITA = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
 
-# --- COORDINATE (Aggiungi qui i nomi che vedi nei log per Torino/Firenze) ---
+# --- COORDINATE (Mapping nomi -> posizione) ---
 COORDINATE = {
     "Piazza VIII Agosto": [44.500, 11.344],
     "Riva Reno": [44.498, 11.336],
@@ -33,14 +33,14 @@ if 'data_attiva' not in st.session_state:
 def sposta_giorno(delta):
     st.session_state.data_attiva += timedelta(days=delta)
 
-# --- CSS CUSTOM (UI & MOBILE) ---
+# --- CSS CUSTOM (EFFETTO WOW & MOBILE) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@300;400;700&display=swap');
     
     .stApp { background: #0d1117; color: #e6edf3; }
     
-    /* Spostiamo tutto più in basso per il mobile */
+    /* Spazio superiore per evitare coperture su mobile */
     .block-container { padding-top: 5rem !important; }
 
     .hero-title {
@@ -89,7 +89,7 @@ def load_clean_data(date_obj):
 st.sidebar.image(LOGO_URL, use_container_width=True)
 st.sidebar.markdown("---")
 
-# Header Titolo
+# Header
 st.markdown("<div class='hero-title'>PERULABTECH</div>", unsafe_allow_html=True)
 st.markdown("<div class='hero-sub'>Smart City Control Room</div>", unsafe_allow_html=True)
 
@@ -106,8 +106,8 @@ if not df.empty:
     grid = st.columns(3)
     for i, row in enumerate(ultimi.itertuples()):
         with grid[i % 3]:
-            lib = row.liberi
-            tot = row.totali if row.totali > 0 else (lib + 20)
+            lib = int(row.liberi)
+            tot = int(row.totali) if row.totali > 0 else (lib + 20)
             perc_occ = min(max((tot - lib) / tot, 0.0), 1.0)
             color = "#3fb950" if (lib/tot) > 0.4 else "#d29922" if (lib/tot) > 0.15 else "#f85149"
             
@@ -129,6 +129,60 @@ if not df.empty:
     
     for row in ultimi.itertuples():
         coords = COORDINATE.get(row.nome, [44.49, 11.34])
-        lib = row.liberi
-        tot = row.totali if row.totali > 0 else (lib + 20)
-        bg_color = "#3fb950" if (lib/tot) > 0.4 else "#d29922" if (lib/tot) > 0.15 else "#
+        lib = int(row.liberi)
+        tot = int(row.totali) if row.totali > 0 else (lib + 20)
+        
+        # Colore cerchietto mappa
+        ratio = lib/tot if tot > 0 else 0
+        bg_map = "#3fb950" if ratio > 0.4 else "#d29922" if ratio > 0.15 else "#f85149"
+        
+        icon_html = f'<div style="background:{bg_map}; border:2px solid white; border-radius:50%; color:white; font-weight:bold; font-size:12px; display:flex; align-items:center; justify-content:center; width:30px; height:30px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">{lib}</div>'
+        
+        popup_content = f"""
+        <div style='font-family:sans-serif; width:160px; color:black;'>
+            <b style='font-size:14px;'>{row.nome}</b><br>
+            <span style='color:#666;'>Disponibili: {lib} / {tot}</span><br>
+            <a href='https://www.google.com/maps/dir/?api=1&destination={coords[0]},{coords[1]}' target='_blank' style='display:block; background:#238636; color:white; text-align:center; padding:8px; border-radius:5px; text-decoration:none; margin-top:8px; font-weight:bold;'>PORTAMI QUI</a>
+        </div>
+        """
+        folium.Marker(location=coords, popup=folium.Popup(popup_content, max_width=200), icon=folium.DivIcon(html=icon_html)).add_to(m)
+    
+    folium_static(m, width=1000, height=350)
+
+    # --- 3. NAVIGAZIONE (SOPRA IL GRAFICO) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
+    with nav_col1:
+        if st.button("◀ Ieri", use_container_width=True): sposta_giorno(-1)
+    with nav_col2:
+        data_att = st.session_state.data_attiva
+        st.markdown(f"<div class='nav-box'><div style='color:#00d2ff; font-weight:bold;'>{GIORNI_ITA[data_att.weekday()].upper()}</div><div style='color:#8b949e; font-size:0.8rem;'>{data_att.strftime('%d %m %Y')}</div></div>", unsafe_allow_html=True)
+    with nav_col3:
+        if st.button("Domani ▶", use_container_width=True): sposta_giorno(1)
+
+    # --- 4. GRAFICO TREND ---
+    st.markdown("<div style='color:#8b949e; font-size:0.75rem; font-weight:600; letter-spacing:1px; margin-top:10px;'>OCCUPANCY TREND (24H)</div>", unsafe_allow_html=True)
+    fig = go.Figure()
+    max_y = int(df_f['totali'].max()) if df_f['totali'].max() > 0 else int(df_f['liberi'].max())
+    
+    for n in df_f['nome'].unique():
+        p = df_f[df_f['nome'] == n].sort_values('timestamp')
+        fig.add_trace(go.Scatter(x=p['timestamp'], y=p['liberi'], name=n, mode='lines', line=dict(width=3, shape='spline'), fill='tozeroy'))
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=400,
+        xaxis=dict(showgrid=False, color="#8b949e"), yaxis=dict(gridcolor='#30363d', color="#8b949e", range=[0, max_y + 15]),
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5, font=dict(color="#f0f6fc", size=10))
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+else:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
+    with nav_col1:
+        if st.button("◀ Ieri", use_container_width=True): sposta_giorno(-1)
+    with nav_col2:
+        st.markdown(f"<div class='nav-box'><div>{st.session_state.data_attiva}</div></div>", unsafe_allow_html=True)
+    with nav_col3:
+        if st.button("Domani ▶", use_container_width=True): sposta_giorno(1)
+    st.warning("Nessun dato registrato per questa data.")
