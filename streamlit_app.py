@@ -1,173 +1,113 @@
 import streamlit as st
-import pandas as pd
 import sqlite3
+import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import os
+from datetime import datetime, timedelta
 
-# --------------------------------------------------
-# CONFIGURAZIONE PAGINA
-# --------------------------------------------------
+# 1. Configurazione Pagina (Mobile First)
+st.set_page_config(page_title="PeruLabTech Smart Parking", page_icon="🅿️", layout="centered")
 
-st.set_page_config(
-    page_title="PeruLabTech Smart Parking",
-    layout="centered"
-)
-
-# --------------------------------------------------
-# STILE CUSTOM (Mobile Friendly)
-# --------------------------------------------------
-
+# 2. Iniezione CSS per Stile iOS
 st.markdown("""
-<style>
-.block-container {
-    padding-top: 1.2rem;
-    padding-bottom: 1rem;
-}
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: #F2F2F7;
+    }
+    
+    /* Nascondi header Streamlit */
+    header {visibility: hidden;}
+    
+    /* Header Stile iPhone */
+    .ios-title {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        color: #000000;
+        margin-bottom: 5px;
+    }
+    .ios-subtitle {
+        font-size: 13px;
+        font-weight: 600;
+        color: #8E8E93;
+        text-transform: uppercase;
+        margin-bottom: 25px;
+    }
 
-.big-title {
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
+    /* Card iOS */
+    .stMetric {
+        background: white;
+        border-radius: 20px;
+        padding: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    
+    /* Bottoni e Slider */
+    .stSlider > div > div > div > div {
+        background-color: #007AFF;
+    }
+    
+    .main-card {
+        background: white;
+        border-radius: 25px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-.section-divider {
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<div class='big-title'>🚀 PERULABTECH SMART PARKING</div>
-""", unsafe_allow_html=True)
-
-# --------------------------------------------------
-# CARICAMENTO DATI
-# --------------------------------------------------
-
-def load_data():
-    if not os.path.exists("storico_parcheggi.db"):
-        return pd.DataFrame()
-
+# 3. Funzioni di Caricamento Dati
+def get_data():
     conn = sqlite3.connect("storico_parcheggi.db")
-    df = pd.read_sql_query("SELECT * FROM storico", conn)
+    df = pd.read_sql_query("SELECT * FROM storico ORDER BY timestamp DESC", conn)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
     conn.close()
     return df
 
+# Header
+st.markdown('<div class="ios-subtitle">PeruLabTech Studio</div>', unsafe_allow_html=True)
+st.markdown('<div class="ios-title">Smart Parking</div>', unsafe_allow_html=True)
 
-df_all = load_data()
+try:
+    df = get_data()
+    
+    # --- SEZIONE REAL TIME ---
+    st.markdown("### 📍 Stato Attuale")
+    ultimo_aggiornamento = df['timestamp'].iloc[0]
+    df_now = df[df['timestamp'] == ultimo_aggiornamento]
+    
+    # Colonne per i parcheggi principali
+    cols = st.columns(2)
+    for i, (index, row) in enumerate(df_now.head(4).iterrows()):
+        with cols[i % 2]:
+            st.metric(label=row['nome'], value=f"{row['liberi']} p.", 
+                      delta_color="normal")
 
-# --------------------------------------------------
-# APP
-# --------------------------------------------------
+    st.markdown("---")
 
-if not df_all.empty:
-
-    df_all['timestamp'] = pd.to_datetime(df_all['timestamp'])
-
-    # Selezione città
-    citta = st.selectbox(
-        "📍 Città",
-        sorted(df_all['citta'].unique())
-    )
-
-    df_citta = df_all[df_all['citta'] == citta]
-
-    # Selezione parcheggio
-    parcheggio = st.selectbox(
-        "🎯 Parcheggio",
-        sorted(df_citta['nome'].unique())
-    )
-
-    df_plot = df_citta[df_citta['nome'] == parcheggio].sort_values('timestamp')
-
-    if not df_plot.empty:
-
-        ultimo = df_plot.iloc[-1]['liberi']
-
-        if len(df_plot) > 1:
-            precedente = df_plot.iloc[-2]['liberi']
-            delta = int(ultimo - precedente)
-        else:
-            delta = 0
-
-        capacita = df_plot['liberi'].max()
-        occupazione = round((1 - ultimo / capacita) * 100, 1)
-
-        # -------------------------
-        # KPI MOBILE STACKED
-        # -------------------------
-
-        st.metric("🚗 Posti Liberi", int(ultimo), delta)
-        st.metric("📊 Occupazione %", f"{occupazione}%")
-
-        trend_label = "📈 In aumento" if delta > 0 else "📉 In calo"
-        st.metric("Trend", trend_label)
-
-        st.divider()
-
-        # -------------------------
-        # GRAFICO AREA
-        # -------------------------
-
-        fig = px.area(
-            df_plot,
-            x='timestamp',
-            y='liberi'
-        )
-
+    # --- SEZIONE STORICA (ANALISI) ---
+    st.markdown("### 📈 Analisi Storica")
+    
+    with st.container():
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        
+        selected_parking = st.selectbox("Seleziona Parcheggio", df['nome'].unique())
+        ore_slider = st.slider("Visualizza ultime ore", 1, 48, 12)
+        
+        limit_time = datetime.now() - timedelta(hours=ore_slider)
+        df_filtered = df[(df['nome'] == selected_parking) & (df['timestamp'] > limit_time)]
+        
+        # Grafico in stile Apple Health (pulito, senza griglie pesanti)
+        fig = px.line(df_filtered, x='timestamp', y='liberi', 
+                      render_mode='svg',
+                      labels={'liberi': 'Posti Liberi', 'timestamp': 'Orario'})
+        
+        fig.update_traces(line_color='#007AFF', line_width=4)
         fig.update_layout(
-            template="plotly_white",
-            height=350,
-            margin=dict(l=10, r=10, t=30, b=10),
-            xaxis_title="",
-            yaxis_title="Posti Liberi"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # -------------------------
-        # GAUGE OCCUPAZIONE
-        # -------------------------
-
-        gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=occupazione,
-            title={'text': "Occupazione %"},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'steps': [
-                    {'range': [0, 50], 'color': "green"},
-                    {'range': [50, 80], 'color': "orange"},
-                    {'range': [80, 100], 'color': "red"},
-                ],
-            }
-        ))
-
-        gauge.update_layout(
-            height=260,
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
-
-        st.plotly_chart(gauge, use_container_width=True)
-
-        # -------------------------
-        # INSIGHT AUTOMATICO
-        # -------------------------
-
-        media = int(df_plot['liberi'].mean())
-        minimo = int(df_plot['liberi'].min())
-
-        st.divider()
-
-        st.info(f"""
-🧠 Insight automatico:
-
-• Media posti liberi: {media}  
-• Minimo registrato: {minimo}  
-• Ultima variazione: {delta}
-        """)
-
-else:
-    st.warning("Database vuoto. Esegui prima lo script di aggiornamento.")
+            plot_bgcolor='white',
+            paper_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=0, r=0, t=20, b=0),
+            height=300,
