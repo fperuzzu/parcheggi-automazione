@@ -121,58 +121,49 @@ def esegui_aggiornamento():
     time.sleep(random.uniform(0.5, 1.5))
 
 
-    # ==============================
-    # TORINO
-    # ==============================
-    try:
-        url_to = "http://opendata.5t.torino.it/get_pk"
-        xml_data = get_xml(session, url_to)
-        root = ET.fromstring(xml_data)
+    # --- TORINO ---
+try:
+    xml_data = get_xml_torino()
+    root = ET.fromstring(xml_data)
 
-        for pk in root.findall("Table"):
-            nome = pk.findtext("Name")
-            liberi = safe_int(pk.findtext("Free"))
-            totali = safe_int(pk.findtext("Total"))
+    for pk in root.findall("Table"):
+        nome = pk.findtext("Name")
+        liberi = safe_int(pk.findtext("Free"))
+        totali = safe_int(pk.findtext("Total"))
 
-            if nome:
-                cursor.execute("""
-                    INSERT INTO storico (citta, nome, liberi, totali, timestamp)
-                    VALUES (?, ?, ?, ?, ?)
-                """, ("Torino", nome, liberi, totali, now))
+        if nome:
+            cursor.execute("""
+                INSERT INTO storico (citta, nome, liberi, totali, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, ("Torino", nome, liberi, totali, now))
 
-        print("✅ Torino aggiornata")
+    print("✅ Torino aggiornata")
 
-    except Exception as e:
-        print(f"❌ Errore Torino: {e}")
-
-    time.sleep(random.uniform(0.5, 1.5))
-
+except Exception as e:
+    print(f"❌ Errore Torino: {e}")
 
     # ==============================
-    # FIRENZE (Realtime JSON diretto)
-    # ==============================
-    try:
-        url_fi = "https://datastore.comune.fi.it/od/ParkFreeSpot.json"
-        data = get_json(session, url_fi)
+# --- FIRENZE ---
+try:
+    url_fi = "https://datastore.comune.fi.it/od/ParkFreeSpot.json"
+    data = get_json(session, url_fi)
 
-        for feature in data.get("features", []):
-            props = feature.get("properties", {})
+    # data è una LISTA, non un dict
+    for rec in data:
+        nome = rec.get("ParkName")
+        liberi = safe_int(rec.get("FreeSpots"))
+        totali = safe_int(rec.get("TotalSpots"))
 
-            nome = props.get("ParkName")
-            liberi = safe_int(props.get("FreeSpots"))
-            totali = safe_int(props.get("TotalSpots"))
+        if nome:
+            cursor.execute("""
+                INSERT INTO storico (citta, nome, liberi, totali, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, ("Firenze", nome, liberi, totali, now))
 
-            if nome:
-                cursor.execute("""
-                    INSERT INTO storico (citta, nome, liberi, totali, timestamp)
-                    VALUES (?, ?, ?, ?, ?)
-                """, ("Firenze", nome, liberi, totali, now))
+    print("✅ Firenze aggiornata")
 
-        print("✅ Firenze aggiornata")
-
-    except Exception as e:
-        print(f"❌ Errore Firenze: {e}")
-
+except Exception as e:
+    print(f"❌ Errore Firenze: {e}")
     conn.commit()
     conn.close()
 
