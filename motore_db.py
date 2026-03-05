@@ -8,47 +8,53 @@ import random
 DB_NAME = "storico_parcheggi.db"
 
 
-# ==============================
-# SESSIONE HTTP ROBUSTA
-# ==============================
-def crea_sessione():
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/json, text/plain, */*",
-        "Connection": "keep-alive"
-    })
-    return session
+# =========================
+# Utility
+# =========================
+def safe_int(val):
+    try:
+        return int(val)
+    except:
+        return 0
 
 
-def get_json(session, url):
-    for tentativo in range(3):
+def get_json(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+    }
+
+    for _ in range(3):
         try:
-            r = session.get(url, timeout=20)
+            r = requests.get(url, headers=headers, timeout=20)
             r.raise_for_status()
             return r.json()
-        except Exception:
-            if tentativo == 2:
-                raise
+        except:
             time.sleep(2)
+    raise Exception("Errore richiesta JSON")
 
 
-def get_xml(session, url):
-    for tentativo in range(3):
+def get_xml(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/xml,text/xml,*/*",
+        "Referer": "http://www.muoversiatorino.it/"
+    }
+
+    for _ in range(3):
         try:
-            r = session.get(url, timeout=20)
+            r = requests.get(url, headers=headers, timeout=20)
             r.raise_for_status()
             return r.content
-        except Exception:
-            if tentativo == 2:
-                raise
+        except:
             time.sleep(2)
+    raise Exception("Errore richiesta XML")
 
 
-# ==============================
-# DATABASE
-# ==============================
-def migra_db(conn):
+# =========================
+# Database
+# =========================
+def inizializza_db(conn):
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -62,45 +68,26 @@ def migra_db(conn):
         )
     """)
 
-    # Migrazione colonne se mancanti
-    try:
-        cursor.execute("ALTER TABLE storico ADD COLUMN totali INTEGER")
-    except:
-        pass
-
-    try:
-        cursor.execute("ALTER TABLE storico ADD COLUMN citta TEXT")
-    except:
-        pass
-
     conn.commit()
 
 
-def safe_int(val):
-    try:
-        return int(val)
-    except:
-        return 0
-
-
-# ==============================
-# AGGIORNAMENTO DATI
-# ==============================
+# =========================
+# Aggiornamento
+# =========================
 def esegui_aggiornamento():
-    session = crea_sessione()
 
     conn = sqlite3.connect(DB_NAME)
-    migra_db(conn)
+    inizializza_db(conn)
     cursor = conn.cursor()
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # ==============================
+    # -------------------------
     # BOLOGNA
-    # ==============================
+    # -------------------------
     try:
         url_bo = "https://opendata.comune.bologna.it/api/explore/v2.1/catalog/datasets/disponibilita-parcheggi-vigente/records?limit=100"
-        data = get_json(session, url_bo)
+        data = get_json(url_bo)
 
         for rec in data.get("results", []):
             nome = rec.get("parcheggio")
@@ -108,65 +95,74 @@ def esegui_aggiornamento():
             totali = safe_int(rec.get("posti_totali"))
 
             if nome:
-                cursor.execute("""
-                    INSERT INTO storico (citta, nome, liberi, totali, timestamp)
-                    VALUES (?, ?, ?, ?, ?)
-                """, ("Bologna", nome, liberi, totali, now))
+                cursor.execute(
+                    "INSERT INTO storico (citta, nome, liberi, totali, timestamp) VALUES (?, ?, ?, ?, ?)",
+                    ("Bologna", nome, liberi, totali, now)
+                )
 
         print("✅ Bologna aggiornata")
 
     except Exception as e:
-        print(f"❌ Errore Bologna: {e}")
+        print("❌ Errore Bologna:", e)
 
     time.sleep(random.uniform(0.5, 1.5))
 
+    # -------------------------
+    # TORINO
+    # -------------------------
+    try:
+        url_to = "http://opendata.5t.torino.it/get_pk"
+        xml_data = get_xml(url_to)
+        root = ET.fromstring(xml_data)
 
-    # --- TORINO ---
-try:
-    xml_data = get_xml_torino()
-    root = ET.fromstring(xml_data)
+        for pk in root.findall("Table"):
+            nome = pk.findtext("Name")
+            liberi = safe_int(pk.findtext("Free"))
+            totali = safe_int(pk.findtext("Total"))
 
-    for pk in root.findall("Table"):
-        nome = pk.findtext("Name")
-        liberi = safe_int(pk.findtext("Free"))
-        totali = safe_int(pk.findtext("Total"))
+            if nome:
+                cursor.execute(
+                    "INSERT INTO storico (citta, nome, liberi, totali, timestamp) VALUES (?, ?, ?, ?, ?)",
+                    ("Torino", nome, liberi, totali, now)
+                )
 
-        if nome:
-            cursor.execute("""
-                INSERT INTO storico (citta, nome, liberi, totali, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-            """, ("Torino", nome, liberi, totali, now))
+        print("✅ Torino aggiornata")
 
-    print("✅ Torino aggiornata")
+    except Exception as e:
+        print("❌ Errore Torino:", e)
 
-except Exception as e:
-    print(f"❌ Errore Torino: {e}")
+    time.sleep(random.uniform(0.5, 1.5))
 
-    # ==============================
-# --- FIRENZE ---
-try:
-    url_fi = "https://datastore.comune.fi.it/od/ParkFreeSpot.json"
-    data = get_json(session, url_fi)
+    # -------------------------
+    # FIRENZE
+    # -------------------------
+    try:
+        url_fi = "https://datastore.comune.fi.it/od/ParkFreeSpot.json"
+        data = get_json(url_fi)
 
-    # data è una LISTA, non un dict
-    for rec in data:
-        nome = rec.get("ParkName")
-        liberi = safe_int(rec.get("FreeSpots"))
-        totali = safe_int(rec.get("TotalSpots"))
+        # IMPORTANTE: è una LISTA
+        for rec in data:
+            nome = rec.get("ParkName")
+            liberi = safe_int(rec.get("FreeSpots"))
+            totali = safe_int(rec.get("TotalSpots"))
 
-        if nome:
-            cursor.execute("""
-                INSERT INTO storico (citta, nome, liberi, totali, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-            """, ("Firenze", nome, liberi, totali, now))
+            if nome:
+                cursor.execute(
+                    "INSERT INTO storico (citta, nome, liberi, totali, timestamp) VALUES (?, ?, ?, ?, ?)",
+                    ("Firenze", nome, liberi, totali, now)
+                )
 
-    print("✅ Firenze aggiornata")
+        print("✅ Firenze aggiornata")
 
-except Exception as e:
-    print(f"❌ Errore Firenze: {e}")
+    except Exception as e:
+        print("❌ Errore Firenze:", e)
+
     conn.commit()
     conn.close()
 
 
+# =========================
+# Main
+# =========================
 if __name__ == "__main__":
     esegui_aggiornamento()
