@@ -408,6 +408,12 @@ if not df_storico.empty:
         if d.empty:
             continue
         c = PALETTE[idx % len(PALETTE)]
+        # Converti hex â†’ rgba per il fill semitrasparente
+        r_val = int(c[1:3], 16)
+        g_val = int(c[3:5], 16)
+        b_val = int(c[5:7], 16)
+        fill_color = f"rgba({r_val},{g_val},{b_val},0.07)"
+
         fig.add_trace(go.Scatter(
             x=d["timestamp"],
             y=d["liberi"],
@@ -415,8 +421,7 @@ if not df_storico.empty:
             mode="lines",
             line=dict(color=c, width=2),
             fill="tozeroy",
-            fillcolor=c.replace("#", "rgba(") + ",0.05)".replace("rgba(", "rgba(")
-                if "#" in c else c,
+            fillcolor=fill_color,
             hovertemplate="<b>%{fullData.name}</b><br>%{x|%H:%M}<br>Liberi: %{y}<extra></extra>",
         ))
 
