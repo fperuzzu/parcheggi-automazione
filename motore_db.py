@@ -162,55 +162,64 @@ def aggiorna_bologna(cur: sqlite3.Cursor, now: str) -> int:
 # Prova prima http:// poi https:// come fallback
 # ─────────────────────────────────────────────
 def aggiorna_torino(cur: sqlite3.Cursor, now: str) -> int:
-    # URL ufficiale nel PDF 5T è http://, non https://
+    # http:// → 403, solo https:// funziona da GitHub Actions
+    # Namespace reale: {https://simone.5t.torino.it/ns/traffic_data.xsd}
     urls = [
-        "http://opendata.5t.torino.it/get_pk",
         "https://opendata.5t.torino.it/get_pk",
+        "http://opendata.5t.torino.it/get_pk",
     ]
     extra = {"Accept": "application/xml, text/xml, */*"}
 
-    raw  = None
-    used = None
+    raw = None
     for url in urls:
         raw = get_with_retry(url, headers=extra, parse="bytes")
         if raw is not None:
-            used = url
             break
 
     if raw is None:
         log.error("✗ Torino: nessun endpoint raggiungibile")
         return 0
 
-    # Verifica che sia XML e non HTML (pagina di blocco)
-    if raw.lstrip()[:1] in (b"<",) is False or b"<html" in raw[:200].lower():
-        log.error("✗ Torino: risposta non XML da %s", used)
+    if b"<html" in raw[:200].lower():
+        log.error("✗ Torino: risposta HTML (blocco IP)")
         return 0
 
     try:
         root = ET.fromstring(raw)
     except ET.ParseError as e:
         log.error("✗ Torino: XML non valido — %s", e)
-        log.debug("  Primi 200 byte: %s", raw[:200])
         return 0
 
+    # Il namespace reale è {https://simone.5t.torino.it/ns/traffic_data.xsd}
+    # I tag sono: traffic_data > PK_data (contiene i parcheggi)
+    # Cerchiamo con wildcard namespace {*}
+    NS = "{https://simone.5t.torino.it/ns/traffic_data.xsd}"
+
     salvati = 0
-    for pk in root.findall(".//PK"):
+    for pk in root.iter(f"{NS}PK_data"):
         try:
-            nome   = pk.find("Name").text
-            liberi = pk.find("Free").text
-            totali = pk.find("Total").text
+            nome   = pk.findtext(f"{NS}name") or pk.findtext(f"{NS}Name")
+            liberi = pk.findtext(f"{NS}free_slots") or pk.findtext(f"{NS}Free")
+            totali = pk.findtext(f"{NS}total_slots") or pk.findtext(f"{NS}Total")
+
+            # Se non trovati con i nomi attesi, logga i figli per debug
+            if nome is None:
+                figli = [child.tag.split("}")[-1] for child in pk]
+                log.warning("  Torino PK senza nome, tag figli: %s", figli)
+                continue
         except AttributeError:
-            log.warning("  Record Torino malformato, saltato")
             continue
         if nome and salva(cur, "Torino", nome, liberi, totali, now):
             salvati += 1
 
     if salvati == 0:
-        # Stampa i tag trovati per debug
-        tags = {child.tag for pk in root.findall(".//PK") for child in pk}
-        log.warning("  Torino: 0 salvati. Tag XML trovati nei PK: %s", tags or "nessuno")
-        all_tags = {el.tag for el in root.iter()}
-        log.warning("  Torino: tutti i tag nel documento: %s", all_tags)
+        # Mostra tutti i sotto-tag del primo PK_data per capire i nomi reali
+        first = next(root.iter(f"{NS}PK_data"), None)
+        if first is not None:
+            figli = [(child.tag.split("}")[-1], child.text) for child in first]
+            log.warning("  Torino: tag del primo PK_data: %s", figli)
+        else:
+            log.warning("  Torino: nessun elemento PK_data trovato nel documento")
 
     log.info("✓ Torino: %d parcheggi salvati", salvati)
     return salvati
@@ -240,51 +249,67 @@ def aggiorna_firenze(cur: sqlite3.Cursor, now: str) -> int:
         log.error("✗ Firenze: impossibile ottenere ParkFreeSpot.json")
         return 0
 
-    features = data.get("features", [])
-    if not features:
-        # Debug: mostra la struttura effettiva
-        log.error("✗ Firenze: GeoJSON vuoto (0 features). Chiavi top-level: %s",
-                  list(data.keys()))
+    # ParkFreeSpot.json può restituire una lista diretta OPPURE un GeoJSON dict
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict):
+        records = data.get("features", [])
+        if not records:
+            log.error("✗ Firenze: GeoJSON vuoto. Chiavi: %s", list(data.keys()))
+            return 0
+    else:
+        log.error("✗ Firenze: formato non gestito: %s", type(data))
         return 0
 
-    log.info("  Firenze: %d features trovate", len(features))
-
-    # Mostra le props del primo elemento per debug
-    if features:
-        sample_props = features[0].get("properties", {})
-        log.info("  Firenze: props esempio: %s", list(sample_props.keys()))
+    log.info("  Firenze: %d record ricevuti", len(records))
+    if records:
+        # Mostra la struttura del primo record per debug
+        first = records[0]
+        if isinstance(first, dict):
+            # Se è GeoJSON standard, le props sono nested in "properties"
+            sample = first.get("properties", first)
+            log.info("  Firenze: chiavi esempio: %s", list(sample.keys())[:10])
 
     salvati = 0
-    for feat in features:
+    for feat in records:
         try:
-            props = feat.get("properties", {})
+            # Gestisci sia GeoJSON (props nested) che lista flat
+            if isinstance(feat, dict) and "properties" in feat:
+                props = feat["properties"]
+            elif isinstance(feat, dict):
+                props = feat  # flat dict, i campi sono direttamente qui
+            else:
+                continue
 
             # Campo nome — prova tutti i possibili nomi
-            nome = (props.get("NOME")       or props.get("nome")
-                    or props.get("NAME")      or props.get("name")
-                    or props.get("PARK_NAME") or props.get("park_name")
-                    or props.get("Descrizione") or props.get("descrizione"))
+            nome = (props.get("NOME")         or props.get("nome")
+                    or props.get("NAME")       or props.get("name")
+                    or props.get("PARK_NAME")  or props.get("park_name")
+                    or props.get("Descrizione") or props.get("descrizione")
+                    or props.get("description"))
 
             # Posti liberi
-            liberi = (props.get("POSTI_LIBERI")  or props.get("posti_liberi")
-                      or props.get("FREE_SLOTS")   or props.get("free_slots")
-                      or props.get("FREE")          or props.get("free")
-                      or props.get("Liberi")        or props.get("liberi"))
+            liberi = (props.get("POSTI_LIBERI") or props.get("posti_liberi")
+                      or props.get("FREE_SLOTS")  or props.get("free_slots")
+                      or props.get("FREE")         or props.get("free")
+                      or props.get("Liberi")       or props.get("liberi")
+                      or props.get("freeSlots"))
 
             # Posti totali
             totali = (props.get("POSTI_TOTALI")  or props.get("posti_totali")
                       or props.get("TOTAL_SLOTS") or props.get("total_slots")
                       or props.get("TOTAL")        or props.get("total")
-                      or props.get("Totali")        or props.get("totali")
-                      or props.get("CAPIENZA")      or props.get("capienza"))
+                      or props.get("Totali")       or props.get("totali")
+                      or props.get("CAPIENZA")     or props.get("capienza")
+                      or props.get("totalSlots"))
 
             if not nome:
-                log.warning("  Firenze: feature senza nome (props: %s)",
+                log.warning("  Firenze: record senza nome (chiavi: %s)",
                             list(props.keys())[:8])
                 continue
 
             if liberi is None or totali is None:
-                log.warning("  Firenze › %s: posti non trovati. Props: %s",
+                log.warning("  Firenze › %s: posti non trovati. Chiavi: %s",
                             nome, list(props.keys()))
                 continue
 
@@ -295,7 +320,7 @@ def aggiorna_firenze(cur: sqlite3.Cursor, now: str) -> int:
         if salva(cur, "Firenze", nome, liberi, totali, now):
             salvati += 1
 
-    log.info("✓ Firenze: %d parcheggi salvati su %d features", salvati, len(features))
+    log.info("✓ Firenze: %d parcheggi salvati su %d record", salvati, len(records))
     return salvati
 
 
