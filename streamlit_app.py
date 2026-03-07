@@ -57,21 +57,22 @@ COORDINATE_FIRENZE = {
     "Pieraccini":          [43.8058, 11.2572],
 }
 
-# URL GeoJSON Firenze (stesso ordine di COORDINATE_FIRENZE)
+# URL GeoJSON Firenze — verificati dai metadati ufficiali opendata.comune.fi.it
+# NOTA: il server usa http://, non https:// (redirect gestito da requests)
 FIRENZE_URLS = {
-    "Parterre":            "https://datastore.comune.fi.it/od/ParkInfo_Parterre.json",
-    "Palazzo Giustizia":   "https://datastore.comune.fi.it/od/ParkInfo_PalazzoGiustizia.json",
-    "Oltrarno":            "https://datastore.comune.fi.it/od/ParkInfo_Oltrarno.json",
-    "Fortezza da Basso":   "https://datastore.comune.fi.it/od/ParkInfo_FortezzaDaBasso.json",
-    "Stazione SMN":        "https://datastore.comune.fi.it/od/ParkInfo_StazioneSMN.json",
-    "Careggi":             "https://datastore.comune.fi.it/od/ParkInfo_Careggi.json",
-    "Beccaria":            "https://datastore.comune.fi.it/od/ParkInfo_Beccaria.json",
-    "Alberti":             "https://datastore.comune.fi.it/od/ParkInfo_Alberti.json",
-    "Stazione Binario 16": "https://datastore.comune.fi.it/od/ParkInfo_StazioneBinario16.json",
-    "San Lorenzo":         "https://datastore.comune.fi.it/od/ParkInfo_SanLorenzo.json",
-    "Sant'Ambrogio":       "https://datastore.comune.fi.it/od/ParkInfo_SantAmbrogio.json",
-    "Porta al Prato":      "https://datastore.comune.fi.it/od/ParkInfo_PortaAlPrato.json",
-    "Pieraccini":          "https://datastore.comune.fi.it/od/ParkInfo_Pieraccini.json",
+    "Parterre":            "http://datastore.comune.fi.it/od/ParkInfo_Parterre.json",
+    "Palazzo Giustizia":   "http://datastore.comune.fi.it/od/ParkInfo_Palazzo_Giustizia.json",
+    "Oltrarno":            "http://datastore.comune.fi.it/od/ParkInfo_Oltrarno.json",
+    "Fortezza da Basso":   "http://datastore.comune.fi.it/od/ParkInfo_Fortezza_Fiera.json",
+    "Stazione SMN":        "http://datastore.comune.fi.it/od/ParkInfo_Firenze_SMN.json",
+    "Careggi":             "http://datastore.comune.fi.it/od/ParkInfo_Careggi.json",
+    "Beccaria":            "http://datastore.comune.fi.it/od/ParkInfo_Beccaria.json",
+    "Alberti":             "http://datastore.comune.fi.it/od/ParkInfo_Alberti.json",
+    "Stazione Binario 16": "http://datastore.comune.fi.it/od/ParkInfo_StazioneBinario16.json",
+    "San Lorenzo":         "http://datastore.comune.fi.it/od/ParkInfo_SanLorenzo.json",
+    "Sant'Ambrogio":       "http://datastore.comune.fi.it/od/ParkInfo_SantAmbrogio.json",
+    "Porta al Prato":      "http://datastore.comune.fi.it/od/ParkInfo_PortaAlPrato.json",
+    "Pieraccini":          "http://datastore.comune.fi.it/od/ParkInfo_Pieraccini.json",
 }
 
 # Centro mappa per città
@@ -222,67 +223,96 @@ def fetch_bologna() -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def fetch_torino() -> pd.DataFrame:
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
-                   "Accept": "application/xml, text/xml"}
-        r    = requests.get("https://opendata.5t.torino.it/get_pk",
-                            headers=headers, timeout=15)
-        r.raise_for_status()
-        root = ET.fromstring(r.content)
-        rows = []
-        for pk in root.findall(".//PK"):
-            try:
-                nome   = pk.find("Name").text
-                lib    = int(pk.find("Free").text)
-                tot    = int(pk.find("Total").text)
-                lat    = float(pk.find("Lat").text)
-                lon    = float(pk.find("Lng").text)
-                if tot > 0 and nome and lib >= 0:
-                    rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
-                                 "totali": tot, "lat": lat, "lon": lon})
-            except (AttributeError, ValueError, TypeError):
-                continue
-        return pd.DataFrame(rows)
-    except Exception as e:
-        st.warning(f"Torino — errore API: {e}")
-        return pd.DataFrame()
+    # Prova prima HTTPS, poi HTTP come fallback
+    for url in ["https://opendata.5t.torino.it/get_pk",
+                "http://opendata.5t.torino.it/get_pk"]:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
+                       "Accept": "application/xml, text/xml, */*"}
+            r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+            r.raise_for_status()
+            # Verifica che sia XML
+            ct = r.headers.get("Content-Type", "")
+            if "html" in ct.lower():
+                continue  # rediretto a pagina di login/blocco
+            root = ET.fromstring(r.content)
+            rows = []
+            for pk in root.findall(".//PK"):
+                try:
+                    nome = pk.find("Name").text
+                    lib  = int(pk.find("Free").text)
+                    tot  = int(pk.find("Total").text)
+                    lat  = float(pk.find("Lat").text)
+                    lon  = float(pk.find("Lng").text)
+                    if tot > 0 and nome and lib >= 0:
+                        rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
+                                     "totali": tot, "lat": lat, "lon": lon})
+                except (AttributeError, ValueError, TypeError):
+                    continue
+            if rows:
+                return pd.DataFrame(rows)
+        except Exception:
+            continue
+    st.warning("Torino — API non raggiungibile dall'ambiente Streamlit Cloud. "
+               "L'endpoint 5T potrebbe bloccare richieste da IP cloud. "
+               "I dati storici rimangono disponibili.")
+    return pd.DataFrame()
 
 
 @st.cache_data(ttl=120)
 def fetch_firenze() -> pd.DataFrame:
-    """Chiama 13 endpoint separati. TTL più alto (2 min) per ridurre le chiamate."""
-    rows = []
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)"}
+    """Chiama 13 endpoint separati. TTL 2 min per ridurre le chiamate."""
+    rows   = []
+    errors = []
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
+               "Accept": "application/json, */*"}
     for nome, url in FIRENZE_URLS.items():
         try:
-            data     = requests.get(url, headers=headers, timeout=10).json()
+            r = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+            r.raise_for_status()
+            # Controlla che non sia HTML (pagina di blocco)
+            if "html" in r.headers.get("Content-Type", "").lower():
+                errors.append(nome)
+                continue
+            data     = r.json()
             features = data.get("features", [])
             if not features:
+                errors.append(nome)
                 continue
             props  = features[0].get("properties", {})
-            liberi = (props.get("FREE_SLOTS")  or props.get("free_slots")
-                      or props.get("POSTI_LIBERI") or props.get("posti_liberi"))
-            totali = (props.get("TOTAL_SLOTS") or props.get("total_slots")
-                      or props.get("POSTI_TOTALI") or props.get("posti_totali"))
+            # Prova tutti i possibili nomi di campo
+            liberi = (props.get("FREE_SLOTS")   or props.get("free_slots")
+                      or props.get("POSTI_LIBERI") or props.get("posti_liberi")
+                      or props.get("FreeSlots")  or props.get("freeslots"))
+            totali = (props.get("TOTAL_SLOTS")  or props.get("total_slots")
+                      or props.get("POSTI_TOTALI") or props.get("posti_totali")
+                      or props.get("TotalSlots") or props.get("totalslots"))
             if liberi is None or totali is None:
+                errors.append(f"{nome}(campi:{list(props.keys())[:4]})")
                 continue
             lib = int(liberi)
             tot = int(totali)
             if tot <= 0:
                 continue
             coords = COORDINATE_FIRENZE.get(nome, [43.775, 11.255])
-            # Prova a prendere coords dal GeoJSON se disponibili
             try:
                 geo = features[0].get("geometry", {}).get("coordinates", [])
                 if geo and len(geo) >= 2:
-                    coords = [geo[1], geo[0]]   # GeoJSON: [lon, lat] → [lat, lon]
+                    coords = [float(geo[1]), float(geo[0])]
             except Exception:
                 pass
             rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
                          "totali": tot, "lat": coords[0], "lon": coords[1]})
-            time.sleep(0.2)
-        except Exception:
+            time.sleep(0.15)
+        except Exception as e:
+            errors.append(f"{nome}({type(e).__name__})")
             continue
+    if errors and not rows:
+        st.warning(f"Firenze — API non raggiungibile dall'ambiente Streamlit Cloud. "
+                   f"Errori: {errors[:3]}{'...' if len(errors)>3 else ''}. "
+                   f"I dati storici rimangono disponibili.")
+    elif errors:
+        st.info(f"Firenze — {len(rows)} parcheggi caricati, {len(errors)} non disponibili.")
     return pd.DataFrame(rows)
 
 
