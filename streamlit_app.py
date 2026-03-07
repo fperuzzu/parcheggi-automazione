@@ -41,38 +41,42 @@ COORDINATE_FALLBACK_BO = {
 }
 
 # Coordinate per Firenze (dal GeoJSON di ogni parcheggio)
-COORDINATE_FIRENZE = {
-    "Parterre":            [43.7833, 11.2536],
-    "Palazzo Giustizia":   [43.7745, 11.2558],
-    "Oltrarno":            [43.7658, 11.2472],
-    "Fortezza da Basso":   [43.7847, 11.2478],
-    "Stazione SMN":        [43.7762, 11.2491],
-    "Careggi":             [43.8067, 11.2581],
-    "Beccaria":            [43.7720, 11.2706],
-    "Alberti":             [43.7694, 11.2644],
-    "Stazione Binario 16": [43.7758, 11.2469],
-    "San Lorenzo":         [43.7748, 11.2522],
-    "Sant'Ambrogio":       [43.7686, 11.2619],
-    "Porta al Prato":      [43.7804, 11.2408],
-    "Pieraccini":          [43.8058, 11.2572],
+# Coordinate Firenze spostate in COORDINATE_FIRENZE_FB (vedi sotto)
+
+# Endpoint unico Firenze — restituisce lista con Id, Name, FreeSpot, Latitude, Longitude
+FIRENZE_URL = "https://datastore.comune.fi.it/od/ParkFreeSpot.json"
+
+# Capacità totale fissa per parcheggio (API non fornisce i totali)
+# Chiavi usate come match parziale sul campo "Name" dell'API
+FIRENZE_CAPACITA = {
+    "Parterre":      630,
+    "Palazzo":       480,
+    "Oltrarno":      392,
+    "Fortezza":      650,
+    "Stazione":      600,
+    "Careggi":       900,
+    "Beccaria":      800,
+    "Alberti":       540,
+    "San Lorenzo":   165,
+    "Ambrogio":      398,
+    "Porta al Prato":490,
+    "Pieraccini":    800,
 }
 
-# URL GeoJSON Firenze — verificati dai metadati ufficiali opendata.comune.fi.it
-# NOTA: il server usa http://, non https:// (redirect gestito da requests)
-FIRENZE_URLS = {
-    "Parterre":            "http://datastore.comune.fi.it/od/ParkInfo_Parterre.json",
-    "Palazzo Giustizia":   "http://datastore.comune.fi.it/od/ParkInfo_Palazzo_Giustizia.json",
-    "Oltrarno":            "http://datastore.comune.fi.it/od/ParkInfo_Oltrarno.json",
-    "Fortezza da Basso":   "http://datastore.comune.fi.it/od/ParkInfo_Fortezza_Fiera.json",
-    "Stazione SMN":        "http://datastore.comune.fi.it/od/ParkInfo_Firenze_SMN.json",
-    "Careggi":             "http://datastore.comune.fi.it/od/ParkInfo_Careggi.json",
-    "Beccaria":            "http://datastore.comune.fi.it/od/ParkInfo_Beccaria.json",
-    "Alberti":             "http://datastore.comune.fi.it/od/ParkInfo_Alberti.json",
-    "Stazione Binario 16": "http://datastore.comune.fi.it/od/ParkInfo_StazioneBinario16.json",
-    "San Lorenzo":         "http://datastore.comune.fi.it/od/ParkInfo_SanLorenzo.json",
-    "Sant'Ambrogio":       "http://datastore.comune.fi.it/od/ParkInfo_SantAmbrogio.json",
-    "Porta al Prato":      "http://datastore.comune.fi.it/od/ParkInfo_PortaAlPrato.json",
-    "Pieraccini":          "http://datastore.comune.fi.it/od/ParkInfo_Pieraccini.json",
+# Coordinate fallback per Firenze (usate se Latitude/Longitude mancano nell'API)
+COORDINATE_FIRENZE_FB = {
+    "Parterre":      [43.7833, 11.2536],
+    "Palazzo":       [43.7745, 11.2558],
+    "Oltrarno":      [43.7658, 11.2472],
+    "Fortezza":      [43.7847, 11.2478],
+    "Stazione":      [43.7762, 11.2491],
+    "Careggi":       [43.8067, 11.2581],
+    "Beccaria":      [43.7720, 11.2706],
+    "Alberti":       [43.7694, 11.2644],
+    "San Lorenzo":   [43.7748, 11.2522],
+    "Ambrogio":      [43.7686, 11.2619],
+    "Porta al Prato":[43.7804, 11.2408],
+    "Pieraccini":    [43.8058, 11.2572],
 }
 
 # Centro mappa per città
@@ -223,7 +227,9 @@ def fetch_bologna() -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def fetch_torino() -> pd.DataFrame:
-    # Prova prima HTTPS, poi HTTP come fallback
+    # Struttura XML reale: namespace {https://simone.5t.torino.it/ns/traffic_data.xsd}
+    # Dati nei tag <PK_data Name="X" Free="12" Total="200" lat="45.0" lng="7.6" .../>
+    NS = "{https://simone.5t.torino.it/ns/traffic_data.xsd}"
     for url in ["https://opendata.5t.torino.it/get_pk",
                 "http://opendata.5t.torino.it/get_pk"]:
         try:
@@ -231,89 +237,84 @@ def fetch_torino() -> pd.DataFrame:
                        "Accept": "application/xml, text/xml, */*"}
             r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
             r.raise_for_status()
-            # Verifica che sia XML
-            ct = r.headers.get("Content-Type", "")
-            if "html" in ct.lower():
-                continue  # rediretto a pagina di login/blocco
+            if b"<html" in r.content[:200].lower():
+                continue
             root = ET.fromstring(r.content)
             rows = []
-            for pk in root.findall(".//PK"):
+            for pk in root.iter(f"{NS}PK_data"):
+                a = pk.attrib
+                nome   = a.get("Name") or a.get("name")
+                liberi = a.get("Free")  or a.get("free")
+                totali = a.get("Total") or a.get("total")
+                lat    = a.get("lat")   or a.get("Lat")
+                lon    = a.get("lng")   or a.get("Lng")
+                if not nome or liberi is None or totali is None:
+                    continue
                 try:
-                    nome = pk.find("Name").text
-                    lib  = int(pk.find("Free").text)
-                    tot  = int(pk.find("Total").text)
-                    lat  = float(pk.find("Lat").text)
-                    lon  = float(pk.find("Lng").text)
-                    if tot > 0 and nome and lib >= 0:
+                    lib = int(liberi); tot = int(totali)
+                    if tot > 0 and lib >= 0:
                         rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
-                                     "totali": tot, "lat": lat, "lon": lon})
-                except (AttributeError, ValueError, TypeError):
+                                     "totali": tot,
+                                     "lat": float(lat) if lat else 45.070,
+                                     "lon": float(lon) if lon else 7.686})
+                except (ValueError, TypeError):
                     continue
             if rows:
                 return pd.DataFrame(rows)
         except Exception:
             continue
-    st.warning("Torino — API non raggiungibile dall'ambiente Streamlit Cloud. "
-               "L'endpoint 5T potrebbe bloccare richieste da IP cloud. "
-               "I dati storici rimangono disponibili.")
-    return pd.DataFrame()
+    return pd.DataFrame(columns=["nome","liberi","occupati","totali","lat","lon"])
 
 
 @st.cache_data(ttl=120)
 def fetch_firenze() -> pd.DataFrame:
-    """Chiama 13 endpoint separati. TTL 2 min per ridurre le chiamate."""
-    rows   = []
-    errors = []
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
-               "Accept": "application/json, */*"}
-    for nome, url in FIRENZE_URLS.items():
-        try:
-            r = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
-            r.raise_for_status()
-            # Controlla che non sia HTML (pagina di blocco)
-            if "html" in r.headers.get("Content-Type", "").lower():
-                errors.append(nome)
-                continue
-            data     = r.json()
-            features = data.get("features", [])
-            if not features:
-                errors.append(nome)
-                continue
-            props  = features[0].get("properties", {})
-            # Prova tutti i possibili nomi di campo
-            liberi = (props.get("FREE_SLOTS")   or props.get("free_slots")
-                      or props.get("POSTI_LIBERI") or props.get("posti_liberi")
-                      or props.get("FreeSlots")  or props.get("freeslots"))
-            totali = (props.get("TOTAL_SLOTS")  or props.get("total_slots")
-                      or props.get("POSTI_TOTALI") or props.get("posti_totali")
-                      or props.get("TotalSlots") or props.get("totalslots"))
-            if liberi is None or totali is None:
-                errors.append(f"{nome}(campi:{list(props.keys())[:4]})")
-                continue
-            lib = int(liberi)
-            tot = int(totali)
-            if tot <= 0:
-                continue
-            coords = COORDINATE_FIRENZE.get(nome, [43.775, 11.255])
-            try:
-                geo = features[0].get("geometry", {}).get("coordinates", [])
-                if geo and len(geo) >= 2:
-                    coords = [float(geo[1]), float(geo[0])]
-            except Exception:
-                pass
-            rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
-                         "totali": tot, "lat": coords[0], "lon": coords[1]})
-            time.sleep(0.15)
-        except Exception as e:
-            errors.append(f"{nome}({type(e).__name__})")
+    """Endpoint unico ParkFreeSpot.json — lista con Name, FreeSpot, Latitude, Longitude."""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
+                   "Accept": "application/json, */*"}
+        r = requests.get(FIRENZE_URL, headers=headers, timeout=15, allow_redirects=True)
+        r.raise_for_status()
+        data = r.json()
+    except Exception:
+        return pd.DataFrame(columns=["nome","liberi","occupati","totali","lat","lon"])
+
+    records = data if isinstance(data, list) else data.get("features", [])
+    rows = []
+    for rec in records:
+        props = rec.get("properties", rec) if isinstance(rec, dict) else {}
+        nome   = props.get("Name") or props.get("name")
+        liberi = props.get("FreeSpot") or props.get("free_spot") or props.get("FREE_SLOTS")
+        lat    = props.get("Latitude")  or props.get("latitude")
+        lon    = props.get("Longitude") or props.get("longitude")
+        if not nome or liberi is None:
             continue
-    if errors and not rows:
-        st.warning(f"Firenze — API non raggiungibile dall'ambiente Streamlit Cloud. "
-                   f"Errori: {errors[:3]}{'...' if len(errors)>3 else ''}. "
-                   f"I dati storici rimangono disponibili.")
-    elif errors:
-        st.info(f"Firenze — {len(rows)} parcheggi caricati, {len(errors)} non disponibili.")
-    return pd.DataFrame(rows)
+        # Capacità totale da dizionario fisso (match parziale case-insensitive)
+        totali = None
+        for chiave, cap in FIRENZE_CAPACITA.items():
+            if chiave.lower() in nome.lower():
+                totali = cap
+                break
+        if totali is None:
+            totali = max(int(liberi), 1)
+        # Coordinate: usa quelle dell'API se disponibili, altrimenti fallback
+        try:
+            r_lat = float(lat) if lat else None
+            r_lon = float(lon) if lon else None
+        except (ValueError, TypeError):
+            r_lat = r_lon = None
+        if not r_lat or not r_lon:
+            fb = next((v for k, v in COORDINATE_FIRENZE_FB.items()
+                       if k.lower() in nome.lower()), [43.775, 11.255])
+            r_lat, r_lon = fb[0], fb[1]
+        try:
+            lib = int(liberi); tot = int(totali)
+            if tot > 0 and 0 <= lib <= tot:
+                rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
+                             "totali": tot, "lat": r_lat, "lon": r_lon})
+        except (ValueError, TypeError):
+            continue
+    return pd.DataFrame(rows) if rows else pd.DataFrame(
+        columns=["nome","liberi","occupati","totali","lat","lon"])
 
 
 FETCH_MAP = {
@@ -361,6 +362,35 @@ with st.spinner(f"Caricamento dati {citta_sel}..."):
 
 
 # ─────────────────────────────────────────────
+# BANNER DATI NON DISPONIBILI
+# ─────────────────────────────────────────────
+live_disponibile = not df_live.empty
+
+if not live_disponibile:
+    st.markdown(f"""
+    <div style="
+        background:#0f0f1a;
+        border:1px solid #2a2a3e;
+        border-left:3px solid #ff8c00;
+        padding:1rem 1.4rem;
+        border-radius:2px;
+        margin-bottom:1.2rem;
+        font-family:'DM Mono',monospace;
+    ">
+        <div style="color:#ff8c00;font-size:0.8rem;font-weight:500;letter-spacing:0.08em;
+                    margin-bottom:0.3rem">
+            ⚡ DATI LIVE NON DISPONIBILI — {citta_sel.upper()}
+        </div>
+        <div style="color:#666;font-size:0.72rem;line-height:1.6">
+            L'API di {citta_sel} non è raggiungibile da Streamlit Cloud.<br>
+            I dati live vengono raccolti dallo <b style="color:#888">scraper in locale</b>
+            e salvati nel database storico.<br>
+            Seleziona una data nel <b style="color:#888">trend storico</b> per vedere i dati raccolti.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
 # STATISTICHE GLOBALI CITTÀ
 # ─────────────────────────────────────────────
 if not df_live.empty:
@@ -398,11 +428,9 @@ if not df_live.empty:
 # ─────────────────────────────────────────────
 # METRIC CARDS
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-label">Disponibilità in tempo reale</div>', unsafe_allow_html=True)
-
-if not df_live.empty:
-    n_cols = min(len(df_live), 6)   # max 6 colonne per riga
-    # Se ci sono più di 6 parcheggi (es. Torino/Firenze), usa più righe
+if live_disponibile:
+    st.markdown('<div class="section-label">Disponibilità in tempo reale</div>', unsafe_allow_html=True)
+    n_cols = min(len(df_live), 6)
     for chunk_start in range(0, len(df_live), n_cols):
         chunk = df_live.iloc[chunk_start:chunk_start + n_cols]
         cols  = st.columns(len(chunk))
@@ -412,35 +440,26 @@ if not df_live.empty:
             with cols[i]:
                 st.metric(label=row.nome, value=row.liberi,
                           delta=f"{occ}% occupato", delta_color=dc)
-else:
-    st.info(f"Nessun dato live disponibile per {citta_sel}.")
-
-st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
-# MAPPA
+# MAPPA + BAR CHART — solo se live disponibile
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-label">Distribuzione geografica</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="section-title" style="margin-bottom:0.8rem">MAPPA {citta_sel.upper()}</div>',
-            unsafe_allow_html=True)
+if live_disponibile:
+    st.markdown('<div class="section-label">Distribuzione geografica</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title" style="margin-bottom:0.8rem">MAPPA {citta_sel.upper()}</div>',
+                unsafe_allow_html=True)
 
-centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
-m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
-
-if not df_live.empty:
+    centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
+    m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
     for row in df_live.itertuples():
         occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
         aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
+    folium_static(m, width=1100, height=420)
+    st.markdown("<hr>", unsafe_allow_html=True)
 
-folium_static(m, width=1100, height=420)
-st.markdown("<hr>", unsafe_allow_html=True)
-
-
-# ─────────────────────────────────────────────
-# BAR CHART OCCUPAZIONE
-# ─────────────────────────────────────────────
-if not df_live.empty:
+if live_disponibile:
     st.markdown('<div class="section-label">Snapshot attuale</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title" style="margin-bottom:0.8rem">OCCUPAZIONE PER PARCHEGGIO</div>',
                 unsafe_allow_html=True)
@@ -470,7 +489,6 @@ if not df_live.empty:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
     st.markdown("<hr>", unsafe_allow_html=True)
-
 
 # ─────────────────────────────────────────────
 # TREND STORICO
