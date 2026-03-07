@@ -1,32 +1,85 @@
+"""
+streamlit_app.py  —  PeruLabTech | Monitoraggio Parcheggi
+──────────────────────────────────────────────────────────
+Città supportate in tempo reale:
+  • Bologna  (3 parcheggi — API Comune di Bologna)
+  • Torino   (~20 parcheggi — API 5T S.r.l.)
+  • Firenze  (13 parcheggi — API Firenze Parcheggi)
+
+Lo storico viene popolato da scraper_parcheggi.py
+"""
+
 import streamlit as st
 import sqlite3
 import pandas as pd
 import plotly.graph_objects as go
 import folium
 import requests
+import xml.etree.ElementTree as ET
 from streamlit_folium import folium_static
 from datetime import datetime
+import time
 
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="PeruLabTech | Parcheggi Bologna",
+    page_title="PeruLabTech | Parcheggi Italia",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
 DB_NAME  = "storico_parcheggi.db"
+PALETTE  = ["#ff8c00", "#00c864", "#00b4ff", "#ff3c3c", "#b57fff", "#ffd700"]
 
-# Coordinate di fallback (l'API le fornisce già nel campo "coordinate")
-COORDINATE_FALLBACK = {
+# Coordinate fallback per Bologna (l'API le include già nella risposta)
+COORDINATE_FALLBACK_BO = {
     "VIII Agosto":  [44.500297, 11.345368],
     "Riva Reno":    [44.501153, 11.336062],
     "Autostazione": [44.504422, 11.346514],
 }
 
-PALETTE = ["#ff8c00", "#00c864", "#00b4ff", "#ff3c3c", "#b57fff", "#ffd700"]
+# Coordinate per Firenze (dal GeoJSON di ogni parcheggio)
+COORDINATE_FIRENZE = {
+    "Parterre":            [43.7833, 11.2536],
+    "Palazzo Giustizia":   [43.7745, 11.2558],
+    "Oltrarno":            [43.7658, 11.2472],
+    "Fortezza da Basso":   [43.7847, 11.2478],
+    "Stazione SMN":        [43.7762, 11.2491],
+    "Careggi":             [43.8067, 11.2581],
+    "Beccaria":            [43.7720, 11.2706],
+    "Alberti":             [43.7694, 11.2644],
+    "Stazione Binario 16": [43.7758, 11.2469],
+    "San Lorenzo":         [43.7748, 11.2522],
+    "Sant'Ambrogio":       [43.7686, 11.2619],
+    "Porta al Prato":      [43.7804, 11.2408],
+    "Pieraccini":          [43.8058, 11.2572],
+}
+
+# URL GeoJSON Firenze (stesso ordine di COORDINATE_FIRENZE)
+FIRENZE_URLS = {
+    "Parterre":            "https://datastore.comune.fi.it/od/ParkInfo_Parterre.json",
+    "Palazzo Giustizia":   "https://datastore.comune.fi.it/od/ParkInfo_PalazzoGiustizia.json",
+    "Oltrarno":            "https://datastore.comune.fi.it/od/ParkInfo_Oltrarno.json",
+    "Fortezza da Basso":   "https://datastore.comune.fi.it/od/ParkInfo_FortezzaDaBasso.json",
+    "Stazione SMN":        "https://datastore.comune.fi.it/od/ParkInfo_StazioneSMN.json",
+    "Careggi":             "https://datastore.comune.fi.it/od/ParkInfo_Careggi.json",
+    "Beccaria":            "https://datastore.comune.fi.it/od/ParkInfo_Beccaria.json",
+    "Alberti":             "https://datastore.comune.fi.it/od/ParkInfo_Alberti.json",
+    "Stazione Binario 16": "https://datastore.comune.fi.it/od/ParkInfo_StazioneBinario16.json",
+    "San Lorenzo":         "https://datastore.comune.fi.it/od/ParkInfo_SanLorenzo.json",
+    "Sant'Ambrogio":       "https://datastore.comune.fi.it/od/ParkInfo_SantAmbrogio.json",
+    "Porta al Prato":      "https://datastore.comune.fi.it/od/ParkInfo_PortaAlPrato.json",
+    "Pieraccini":          "https://datastore.comune.fi.it/od/ParkInfo_Pieraccini.json",
+}
+
+# Centro mappa per città
+MAPPA_CENTRI = {
+    "Bologna": [44.499, 11.343],
+    "Torino":  [45.070, 7.686],
+    "Firenze": [43.775, 11.255],
+}
 
 # ─────────────────────────────────────────────
 # CSS
@@ -45,69 +98,58 @@ html, body, [data-testid="stAppViewContainer"] {
         radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,180,255,0.04) 0%, transparent 60%),
         #0a0a0f;
 }
-[data-testid="stHeader"], [data-testid="stToolbar"] { display: none !important; }
+[data-testid="stHeader"], [data-testid="stToolbar"] { display:none !important; }
+[data-testid="stSidebar"] { background:#0f0f16 !important; border-right:1px solid #1e1e2e; }
 
-h1,h2,h3,h4 { font-family: 'Bebas Neue', sans-serif !important; letter-spacing: 0.05em; }
-p, span, div, label { font-family: 'DM Sans', sans-serif !important; }
+h1,h2,h3,h4 { font-family:'Bebas Neue',sans-serif !important; letter-spacing:0.05em; }
+p,span,div,label { font-family:'DM Sans',sans-serif !important; }
 
 [data-testid="metric-container"] {
-    background: #111118 !important;
-    border: 1px solid #1e1e2e !important;
-    border-radius: 2px !important;
-    padding: 1rem 1.2rem !important;
-    transition: border-color 0.2s;
+    background:#111118 !important; border:1px solid #1e1e2e !important;
+    border-radius:2px !important; padding:1rem 1.2rem !important;
+    transition:border-color 0.2s;
 }
-[data-testid="metric-container"]:hover { border-color: #ff8c00 !important; }
+[data-testid="metric-container"]:hover { border-color:#ff8c00 !important; }
 [data-testid="metric-container"] label {
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.7rem !important;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #666 !important;
+    font-family:'DM Mono',monospace !important; font-size:0.7rem !important;
+    text-transform:uppercase; letter-spacing:0.1em; color:#666 !important;
 }
 [data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-family: 'Bebas Neue', sans-serif !important;
-    font-size: 2.2rem !important;
-    color: #e8e6e0 !important;
+    font-family:'Bebas Neue',sans-serif !important; font-size:2.2rem !important;
+    color:#e8e6e0 !important;
 }
 [data-testid="metric-container"] [data-testid="stMetricDelta"] {
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.72rem !important;
+    font-family:'DM Mono',monospace !important; font-size:0.72rem !important;
 }
 
-hr { border-color: #1e1e2e !important; margin: 1.5rem 0; }
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #0a0a0f; }
-::-webkit-scrollbar-thumb { background: #ff8c00; border-radius: 2px; }
+hr { border-color:#1e1e2e !important; margin:1.5rem 0; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:#0a0a0f; }
+::-webkit-scrollbar-thumb { background:#ff8c00; border-radius:2px; }
 
-[data-testid="stSelectbox"] > div > div,
+div[data-baseweb="select"] > div,
 [data-testid="stDateInput"] > div > div {
-    background: #111118 !important;
-    border: 1px solid #1e1e2e !important;
-    border-radius: 2px !important;
-    color: #e8e6e0 !important;
+    background:#111118 !important; border:1px solid #1e1e2e !important;
+    border-radius:2px !important; color:#e8e6e0 !important;
 }
 
 .section-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #444;
-    margin-bottom: 0.3rem;
+    font-family:'DM Mono',monospace; font-size:0.65rem;
+    text-transform:uppercase; letter-spacing:0.15em; color:#444; margin-bottom:0.3rem;
 }
 .section-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.8rem;
-    letter-spacing: 0.05em;
-    margin: 0;
-    line-height: 1;
+    font-family:'Bebas Neue',sans-serif; font-size:1.8rem;
+    letter-spacing:0.05em; margin:0; line-height:1;
 }
 .pill { display:inline-block; padding:2px 10px; border-radius:20px;
         font-family:'DM Mono',monospace; font-size:0.7rem; font-weight:500; letter-spacing:0.05em; }
 .pill-green  { background:rgba(0,200,100,0.12);  color:#00c864; border:1px solid #00c86430; }
 .pill-orange { background:rgba(255,160,0,0.12);  color:#ffa000; border:1px solid #ffa00030; }
-.pill-red    { background:rgba(255,60,60,0.12);   color:#ff3c3c; border:1px solid #ff3c3c30; }
+.pill-red    { background:rgba(255,60,60,0.12);  color:#ff3c3c; border:1px solid #ff3c3c30; }
+.city-tab { display:inline-block; padding:4px 16px; border-radius:2px; cursor:pointer;
+            font-family:'DM Mono',monospace; font-size:0.75rem; letter-spacing:0.1em;
+            text-transform:uppercase; margin-right:6px;
+            border:1px solid #1e1e2e; color:#666; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,39 +163,134 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.07) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
+def occ_color(pct: int) -> str:
+    return "#00c864" if pct < 60 else "#ffa000" if pct < 85 else "#ff3c3c"
+
+
+def aggiungi_marker(m, lat, lon, nome, occ, liberi, totali):
+    color    = occ_color(occ)
+    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+    popup_html = (
+        f"<div style='font-family:monospace;font-size:12px;min-width:165px;line-height:1.7'>"
+        f"<b style='font-size:13px'>{nome}</b><br>"
+        f"<span style='color:#888'>{liberi} / {totali} posti liberi</span><br>"
+        f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
+        f"<a href='{maps_url}' target='_blank' "
+        f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
+        f"background:{color}22;border:1px solid {color}66;"
+        f"color:{color};text-decoration:none;border-radius:3px;"
+        f"font-size:11px;font-weight:bold'>&#x1F9ED; Naviga con Maps</a>"
+        f"</div>"
+    )
+    folium.CircleMarker(
+        location=[lat, lon], radius=14,
+        color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
+        tooltip=folium.Tooltip(f"<b>{nome}</b> — {occ}% occupato"),
+        popup=folium.Popup(popup_html, max_width=230)
+    ).add_to(m)
+    folium.CircleMarker(
+        location=[lat, lon], radius=20,
+        color=color, fill=False, weight=1, opacity=0.3
+    ).add_to(m)
+
+
+# ─────────────────────────────────────────────
+# FETCH LIVE PER CITTÀ
+# ─────────────────────────────────────────────
 @st.cache_data(ttl=60)
-def fetch_live() -> pd.DataFrame:
+def fetch_bologna() -> pd.DataFrame:
     try:
-        url = ("https://opendata.comune.bologna.it/api/explore/v2.1/catalog/"
-               "datasets/disponibilita-parcheggi-vigente/records?limit=50")
-        r = requests.get(url, timeout=10).json()
+        url  = ("https://opendata.comune.bologna.it/api/explore/v2.1/catalog/"
+                "datasets/disponibilita-parcheggi-vigente/records?limit=50")
+        data = requests.get(url, timeout=10).json()
         rows = []
-        for rec in r.get("results", []):
+        for rec in data.get("results", []):
             tot  = int(rec.get("posti_totali") or 0)
             lib  = int(rec.get("posti_liberi") or 0)
             nome = rec.get("parcheggio", "")
             coord = rec.get("coordinate") or {}
-            lat  = coord.get("lat") or COORDINATE_FALLBACK.get(nome, [44.499, 11.343])[0]
-            lon  = coord.get("lon") or COORDINATE_FALLBACK.get(nome, [44.499, 11.343])[1]
+            lat  = coord.get("lat") or COORDINATE_FALLBACK_BO.get(nome, [44.499, 11.343])[0]
+            lon  = coord.get("lon") or COORDINATE_FALLBACK_BO.get(nome, [44.499, 11.343])[1]
             if tot > 0 and nome:
-                rows.append({
-                    "nome":     nome,
-                    "liberi":   lib,
-                    "occupati": tot - lib,
-                    "totali":   tot,
-                    "lat":      lat,
-                    "lon":      lon,
-                })
+                rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
+                             "totali": tot, "lat": lat, "lon": lon})
         return pd.DataFrame(rows)
     except Exception as e:
-        st.warning(f"Errore dati live: {e}")
+        st.warning(f"Bologna — errore API: {e}")
         return pd.DataFrame()
 
 
-# ─────────────────────────────────────────────
-# LIVE DATA
-# ─────────────────────────────────────────────
-df_live = fetch_live()
+@st.cache_data(ttl=60)
+def fetch_torino() -> pd.DataFrame:
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)",
+                   "Accept": "application/xml, text/xml"}
+        r    = requests.get("https://opendata.5t.torino.it/get_pk",
+                            headers=headers, timeout=15)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        rows = []
+        for pk in root.findall(".//PK"):
+            try:
+                nome   = pk.find("Name").text
+                lib    = int(pk.find("Free").text)
+                tot    = int(pk.find("Total").text)
+                lat    = float(pk.find("Lat").text)
+                lon    = float(pk.find("Lng").text)
+                if tot > 0 and nome and lib >= 0:
+                    rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
+                                 "totali": tot, "lat": lat, "lon": lon})
+            except (AttributeError, ValueError, TypeError):
+                continue
+        return pd.DataFrame(rows)
+    except Exception as e:
+        st.warning(f"Torino — errore API: {e}")
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=120)
+def fetch_firenze() -> pd.DataFrame:
+    """Chiama 13 endpoint separati. TTL più alto (2 min) per ridurre le chiamate."""
+    rows = []
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; ParcheggiBot/1.0)"}
+    for nome, url in FIRENZE_URLS.items():
+        try:
+            data     = requests.get(url, headers=headers, timeout=10).json()
+            features = data.get("features", [])
+            if not features:
+                continue
+            props  = features[0].get("properties", {})
+            liberi = (props.get("FREE_SLOTS")  or props.get("free_slots")
+                      or props.get("POSTI_LIBERI") or props.get("posti_liberi"))
+            totali = (props.get("TOTAL_SLOTS") or props.get("total_slots")
+                      or props.get("POSTI_TOTALI") or props.get("posti_totali"))
+            if liberi is None or totali is None:
+                continue
+            lib = int(liberi)
+            tot = int(totali)
+            if tot <= 0:
+                continue
+            coords = COORDINATE_FIRENZE.get(nome, [43.775, 11.255])
+            # Prova a prendere coords dal GeoJSON se disponibili
+            try:
+                geo = features[0].get("geometry", {}).get("coordinates", [])
+                if geo and len(geo) >= 2:
+                    coords = [geo[1], geo[0]]   # GeoJSON: [lon, lat] → [lat, lon]
+            except Exception:
+                pass
+            rows.append({"nome": nome, "liberi": lib, "occupati": tot - lib,
+                         "totali": tot, "lat": coords[0], "lon": coords[1]})
+            time.sleep(0.2)
+        except Exception:
+            continue
+    return pd.DataFrame(rows)
+
+
+FETCH_MAP = {
+    "Bologna": fetch_bologna,
+    "Torino":  fetch_torino,
+    "Firenze": fetch_firenze,
+}
 
 
 # ─────────────────────────────────────────────
@@ -167,47 +304,63 @@ with col_logo:
 with col_title:
     now_str = datetime.now().strftime("%d %b %Y  —  %H:%M")
     st.markdown(f"""
-    <div class="section-label">Sistema di monitoraggio urbano</div>
-    <div class="section-title">PARCHEGGI BOLOGNA</div>
+    <div class="section-label">Sistema di monitoraggio urbano · Bologna · Torino · Firenze</div>
+    <div class="section-title">MONITORAGGIO PARCHEGGI</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#555;margin-top:4px">
         Aggiornato {now_str}
     </div>
     """, unsafe_allow_html=True)
 
+# Selezione città nella colonna destra dell'header
 with col_stats:
-    if not df_live.empty:
-        tot_lib  = int(df_live["liberi"].sum())
-        tot_occ  = int(df_live["occupati"].sum())
-        tot_tot  = int(df_live["totali"].sum())
-        pct_glob = int(tot_occ / tot_tot * 100) if tot_tot > 0 else 0
-        pill_cls = "pill-green" if pct_glob < 60 else "pill-orange" if pct_glob < 85 else "pill-red"
-        st.markdown(f"""
-        <div style="text-align:right;padding-top:8px">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:#e8e6e0">
-                {tot_lib:,}
-                <span style="font-size:1rem;color:#555;font-family:'DM Mono',monospace"> posti liberi</span>
-            </div>
-            <span class="pill {pill_cls}" style="margin-top:4px">{pct_glob}% OCCUPATO</span>
-        </div>
-        """, unsafe_allow_html=True)
+    citta_sel = st.radio(
+        "Città",
+        options=["Bologna", "Torino", "Firenze"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
-# ALERT
+# CARICA DATI LIVE PER LA CITTÀ SELEZIONATA
+# ─────────────────────────────────────────────
+with st.spinner(f"Caricamento dati {citta_sel}..."):
+    df_live = FETCH_MAP[citta_sel]()
+
+
+# ─────────────────────────────────────────────
+# STATISTICHE GLOBALI CITTÀ
 # ─────────────────────────────────────────────
 if not df_live.empty:
-    critici = df_live[
-        df_live.apply(lambda r: int(r["occupati"] / r["totali"] * 100) >= 85, axis=1)
-    ]
+    tot_lib  = int(df_live["liberi"].sum())
+    tot_occ  = int(df_live["occupati"].sum())
+    tot_tot  = int(df_live["totali"].sum())
+    pct_glob = int(tot_occ / tot_tot * 100) if tot_tot > 0 else 0
+    pill_cls = "pill-green" if pct_glob < 60 else "pill-orange" if pct_glob < 85 else "pill-red"
+
+    st.markdown(f"""
+    <div style="text-align:right;padding-bottom:0.8rem">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:#e8e6e0">
+            {tot_lib:,}
+            <span style="font-size:1rem;color:#555;font-family:'DM Mono',monospace"> posti liberi</span>
+        </div>
+        <span class="pill {pill_cls}">{citta_sel.upper()} — {pct_glob}% OCCUPATO</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Alert alta occupazione
+    critici = df_live[df_live.apply(
+        lambda r: int(r["occupati"] / r["totali"] * 100) >= 85, axis=1
+    )]
     if not critici.empty:
-        nomi = ", ".join(critici["nome"].tolist())
+        nomi_crit = ", ".join(critici["nome"].tolist())
         st.markdown(f"""
         <div style="background:#1a0a0a;border:1px solid #ff3c3c33;border-left:3px solid #ff3c3c;
                     padding:0.7rem 1rem;border-radius:2px;margin-bottom:1rem;
                     font-family:'DM Mono',monospace;font-size:0.78rem;color:#ff7070">
-            ⚠️ &nbsp; ALTA OCCUPAZIONE → {nomi}
+            ⚠️ &nbsp; ALTA OCCUPAZIONE → {nomi_crit}
         </div>
         """, unsafe_allow_html=True)
 
@@ -218,15 +371,19 @@ if not df_live.empty:
 st.markdown('<div class="section-label">Disponibilità in tempo reale</div>', unsafe_allow_html=True)
 
 if not df_live.empty:
-    cols = st.columns(len(df_live))
-    for i, row in enumerate(df_live.itertuples()):
-        occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-        delta_color = "normal" if occ < 60 else "off" if occ < 85 else "inverse"
-        with cols[i]:
-            st.metric(label=row.nome, value=row.liberi,
-                      delta=f"{occ}% occupato", delta_color=delta_color)
+    n_cols = min(len(df_live), 6)   # max 6 colonne per riga
+    # Se ci sono più di 6 parcheggi (es. Torino/Firenze), usa più righe
+    for chunk_start in range(0, len(df_live), n_cols):
+        chunk = df_live.iloc[chunk_start:chunk_start + n_cols]
+        cols  = st.columns(len(chunk))
+        for i, row in enumerate(chunk.itertuples()):
+            occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+            dc  = "normal" if occ < 60 else "off" if occ < 85 else "inverse"
+            with cols[i]:
+                st.metric(label=row.nome, value=row.liberi,
+                          delta=f"{occ}% occupato", delta_color=dc)
 else:
-    st.info("Nessun dato live disponibile.")
+    st.info(f"Nessun dato live disponibile per {citta_sel}.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -235,40 +392,16 @@ st.markdown("<hr>", unsafe_allow_html=True)
 # MAPPA
 # ─────────────────────────────────────────────
 st.markdown('<div class="section-label">Distribuzione geografica</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title" style="margin-bottom:0.8rem">MAPPA PARCHEGGI</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="section-title" style="margin-bottom:0.8rem">MAPPA {citta_sel.upper()}</div>',
+            unsafe_allow_html=True)
 
-m = folium.Map(location=[44.499, 11.343], zoom_start=14, tiles="cartodbdark_matter")
+centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
+m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
 
 if not df_live.empty:
     for row in df_live.itertuples():
-        occ   = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-        color = "#00c864" if occ < 60 else "#ffa000" if occ < 85 else "#ff3c3c"
-        lat, lon = row.lat, row.lon
-        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
-        liberi_txt = f"{row.liberi} / {row.totali} posti liberi"
-        popup_html = (
-            f"<div style='font-family:monospace;font-size:12px;min-width:165px;line-height:1.7'>"
-            f"<b style='font-size:13px'>{row.nome}</b><br>"
-            f"<span style='color:#888'>{liberi_txt}</span><br>"
-            f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
-            f"<a href='{maps_url}' target='_blank' "
-            f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
-            f"background:{color}22;border:1px solid {color}66;"
-            f"color:{color};text-decoration:none;border-radius:3px;"
-            f"font-size:11px;font-weight:bold'>"
-            f"&#x1F9ED; Naviga con Maps</a>"
-            f"</div>"
-        )
-        folium.CircleMarker(
-            location=[lat, lon], radius=14,
-            color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
-            tooltip=folium.Tooltip(f"<b>{row.nome}</b> — {occ}% occupato"),
-            popup=folium.Popup(popup_html, max_width=230)
-        ).add_to(m)
-        folium.CircleMarker(
-            location=[lat, lon], radius=20,
-            color=color, fill=False, weight=1, opacity=0.3
-        ).add_to(m)
+        occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+        aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
 
 folium_static(m, width=1100, height=420)
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -286,14 +419,11 @@ if not df_live.empty:
     df_bar["pct"] = (df_bar["occupati"] / df_bar["totali"] * 100).astype(int)
     df_bar = df_bar.sort_values("pct", ascending=True)
 
-    bar_colors = ["#00c864" if p < 60 else "#ffa000" if p < 85 else "#ff3c3c"
-                  for p in df_bar["pct"]]
-
     fig_bar = go.Figure(go.Bar(
         x=list(df_bar["pct"]),
         y=list(df_bar["nome"]),
         orientation="h",
-        marker_color=bar_colors,
+        marker_color=[occ_color(p) for p in df_bar["pct"]],
         marker_line_width=0,
         text=[f"{p}%" for p in df_bar["pct"]],
         textposition="outside",
@@ -301,14 +431,12 @@ if not df_live.empty:
     ))
     fig_bar.update_xaxes(range=[0, 115], showgrid=True, gridcolor="#1e1e2e",
                          ticksuffix="%", zeroline=False, tickfont=dict(size=10))
-    fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=12, color="#bbb"))
+    fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=11, color="#bbb"))
     fig_bar.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        height=260,
-        margin=dict(l=10, r=40, t=10, b=10),
-        bargap=0.35,
-        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        height=max(200, len(df_bar) * 36),
+        margin=dict(l=10, r=50, t=10, b=10),
+        bargap=0.3, showlegend=False,
     )
     st.plotly_chart(fig_bar, use_container_width=True)
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -335,14 +463,14 @@ with col_f:
         parcheggio_sel = st.selectbox(
             "Parcheggio",
             options=["Tutti"] + nomi_disponibili,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
 
 try:
     conn = sqlite3.connect(DB_NAME)
     df_storico = pd.read_sql_query(
-        "SELECT * FROM storico WHERE timestamp LIKE ?", conn,
-        params=(f"{st.session_state.data_att}%",)
+        "SELECT * FROM storico WHERE citta=? AND timestamp LIKE ?",
+        conn, params=(citta_sel, f"{st.session_state.data_att}%")
     )
     conn.close()
 except Exception as e:
@@ -365,8 +493,7 @@ if not df_storico.empty:
         traces.append(go.Scatter(
             x=list(d["timestamp"]),
             y=list(d["liberi"].astype(int)),
-            name=p,
-            mode="lines",
+            name=p, mode="lines",
             line=dict(color=c, width=2),
             fill="tozeroy",
             fillcolor=hex_to_rgba(c, 0.07),
@@ -378,17 +505,14 @@ if not df_storico.empty:
                          zeroline=False, tickformat="%H:%M")
         fig.update_yaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False)
         fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=360,
-            margin=dict(l=10, r=10, t=20, b=10),
-            hovermode="x unified",
-            showlegend=True,
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            height=360, margin=dict(l=10, r=10, t=20, b=10),
+            hovermode="x unified", showlegend=True,
             legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1e1e2e", borderwidth=1),
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("Nessun dato per il parcheggio selezionato in questa data.")
+        st.info("Nessun dato storico per il parcheggio selezionato.")
 else:
     st.markdown("""
     <div style="background:#111118;border:1px solid #1e1e2e;border-radius:2px;
@@ -406,9 +530,13 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("""
 <div style="display:flex;justify-content:space-between;align-items:center;
             font-family:'DM Mono',monospace;font-size:0.65rem;color:#333;padding-bottom:1rem">
-    <span>© PERULABTECH — Sistema di monitoraggio parcheggi Bologna</span>
-    <span>Dati: <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">
-        opendata.comune.bologna.it
-    </a></span>
+    <span>© PERULABTECH — Sistema di monitoraggio parcheggi</span>
+    <span>
+        <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">Bologna</a>
+        &nbsp;·&nbsp;
+        <a href="https://opendata.5t.torino.it" style="color:#555;text-decoration:none">Torino</a>
+        &nbsp;·&nbsp;
+        <a href="https://opendata.comune.fi.it" style="color:#555;text-decoration:none">Firenze</a>
+    </span>
 </div>
 """, unsafe_allow_html=True)
