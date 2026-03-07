@@ -3,41 +3,35 @@ name: Auto Update Parcheggi
 on:
   schedule:
     - cron: '0,30 * * * *'   # ogni 30 minuti
-  workflow_dispatch:           # run manuale dalla UI GitHub
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4          # v4 è l'attuale stabile
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5      # v5 è l'attuale stabile
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'           # 3.14 è pre-release, meglio 3.11 LTS
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install requests
 
       - name: Run scraper
+        env:
+          TURSO_URL:   ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
         run: |
-          # Ogni domenica a mezzanotte pulisce i record > 30 giorni
-          DAY=$(date +%u)   # 1=lunedì … 7=domenica
+          DAY=$(date +%u)
           HOUR=$(date +%H)
-          if [ "$DAY" = "7" ] && [ "$HOUR" = "00" ]; then
+          if [ "$DAY" = "7" ] && [ "$HOUR" = "02" ]; then
             python motore_db.py --pulisci --retention 30
           else
             python motore_db.py
           fi
 
-      - name: Commit e push
-        run: |
-          git config --global user.name  "GitHub Action"
-          git config --global user.email "action@github.com"
-          git add storico_parcheggi.db
-          git commit -m "db: update $(date +'%Y-%m-%d %H:%M')" || echo "Nessuna modifica"
-          git push
+      # Nessun commit — il DB vive su Turso, non nel repo
