@@ -24,9 +24,9 @@ import time
 # CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="PeruLabTech | Parcheggi Italia",
+    page_title="ParkPulse — Real-time Parking Italy",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="auto",
 )
 
 LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
@@ -292,6 +292,77 @@ div[data-baseweb="select"] > div,
     color:#aaa !important;
 }
 
+/* HERO */
+.hero-pitch {
+    font-family:'DM Sans',sans-serif; font-size:0.88rem;
+    color:#666; line-height:1.6; max-width:520px;
+    margin-top:2px;
+}
+.hero-pitch b { color:#aaa; }
+
+/* CITY CARDS */
+.city-cards { display:flex; gap:8px; margin:0.4rem 0; }
+.city-card {
+    flex:1; padding:10px 14px; border-radius:4px; cursor:pointer;
+    border:1px solid #1e1e2e; background:#0f0f18;
+    transition:all 0.15s; text-align:center;
+}
+.city-card.active {
+    border-color:#ff8c00;
+    background: rgba(255,140,0,0.08);
+}
+.city-card:hover:not(.active) { border-color:#333; background:#141420; }
+.city-card-flag { font-size:1.2rem; display:block; margin-bottom:2px; }
+.city-card-name {
+    font-family:'DM Mono',monospace; font-size:0.7rem;
+    letter-spacing:0.1em; text-transform:uppercase;
+    color:#888;
+}
+.city-card.active .city-card-name { color:#ff8c00; }
+
+/* INSIGHT CARDS */
+.insight-grid { display:flex; gap:10px; margin:0.6rem 0 1rem 0; }
+.insight-card {
+    flex:1; background:#0c0c14; border:1px solid #1a1a28;
+    border-radius:4px; padding:0.8rem 1rem;
+}
+.insight-val {
+    font-family:'Bebas Neue',sans-serif; font-size:1.6rem;
+    color:#e8e6e0; line-height:1;
+}
+.insight-val.orange { color:#ffa000; }
+.insight-val.green  { color:#00c864; }
+.insight-label {
+    font-family:'DM Mono',monospace; font-size:0.58rem;
+    color:#444; text-transform:uppercase; letter-spacing:0.12em;
+    margin-top:3px;
+}
+
+/* SIDEBAR CTA */
+.cta-block {
+    background:#0f0f18; border:1px solid #1e1e2e; border-radius:4px;
+    padding:1rem; margin-bottom:0.8rem;
+}
+.cta-title {
+    font-family:'DM Mono',monospace; font-size:0.68rem;
+    color:#888; text-transform:uppercase; letter-spacing:0.1em;
+    margin-bottom:0.5rem;
+}
+.cta-btn {
+    display:block; width:100%; padding:8px;
+    background:transparent; border:1px solid #2a2a3a;
+    border-radius:3px; color:#aaa;
+    font-family:'DM Mono',monospace; font-size:0.68rem;
+    letter-spacing:0.08em; text-align:center;
+    cursor:pointer; margin-bottom:6px;
+    text-decoration:none; transition:all 0.15s;
+}
+.cta-btn:hover { border-color:#ff8c00; color:#ff8c00; }
+.cta-btn.primary {
+    background:#ff8c00; border-color:#ff8c00;
+    color:#0a0a0f; font-weight:600;
+}
+
 /* ALERT soft */
 .alert-soft {
     display:flex; align-items:center; gap:8px;
@@ -471,46 +542,114 @@ FETCH_MAP = {
 
 
 # ─────────────────────────────────────────────
-# TOP BAR
+# SIDEBAR — CTA + info
+# ─────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div style="padding:0.5rem 0 1rem 0">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;
+                    letter-spacing:0.05em;color:#ff8c00">ParkPulse</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
+                    color:#444;text-transform:uppercase;letter-spacing:0.12em">
+            Italy Parking Monitor
+        </div>
+    </div>
+    <hr style="border-color:#1a1a24;margin-bottom:1rem">
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="cta-block">
+        <div class="cta-title">📊 Data</div>
+        <a class="cta-btn primary" href="mailto:info@perulabtech.com?subject=ParkPulse Dataset">
+            Download Dataset
+        </a>
+        <a class="cta-btn" href="mailto:info@perulabtech.com?subject=ParkPulse API Access">
+            🔌 API Access
+        </a>
+    </div>
+    <div class="cta-block">
+        <div class="cta-title">📡 Copertura</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    CITTA_INFO = {
+        "Bologna":  {"emoji": "🅱", "n": 3},
+        "Torino":   {"emoji": "🔺", "n": 36},
+        "Firenze":  {"emoji": "🌸", "n": 13},
+    }
+    for city, info in CITTA_INFO.items():
+        st.markdown(f"""
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:5px 0;border-bottom:1px solid #111120;
+                    font-family:'DM Mono',monospace;font-size:0.68rem">
+            <span style="color:#888">{info['emoji']} {city}</span>
+            <span style="color:#555">{info['n']} parcheggi</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="margin-top:1.5rem;font-family:'DM Mono',monospace;
+                font-size:0.58rem;color:#333;line-height:1.8">
+        Dati aggiornati ogni 30 min<br>
+        Fonti: Comune di Bologna,<br>
+        5T Torino, Firenze Parcheggi<br><br>
+        © PeruLabTech
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# HERO + SELEZIONE CITTÀ
 # ─────────────────────────────────────────────
 now_str = datetime.now().strftime("%d %b %Y · %H:%M")
-col_brand, col_nav, col_time = st.columns([3, 4, 2])
 
-with col_brand:
-    st.markdown(f"""
-    <div class="topbar-brand" style="padding-top:4px">
-        <div>
-            <div class="topbar-title">🅿 Parking Monitor Italia</div>
-            <div class="topbar-sub">Bologna · Torino · Firenze</div>
+col_hero, col_time = st.columns([5, 2])
+with col_hero:
+    st.markdown("""
+    <div style="padding:0.2rem 0 0.6rem 0">
+        <div style="display:flex;align-items:baseline;gap:10px">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;
+                         color:#ff8c00;letter-spacing:0.05em">ParkPulse</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;
+                         color:#333;letter-spacing:0.1em">BETA</span>
+        </div>
+        <div class="hero-pitch">
+            Real-time parking availability in Italian cities.<br>
+            <b>Monitor occupancy, spot trends, plan your route.</b>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-with col_nav:
-    # Tab-style buttons via session_state
-    if "citta_sel" not in st.session_state:
-        st.session_state.citta_sel = "Bologna"
-    btn_cols = st.columns(3)
-    for i, city in enumerate(["Bologna", "Torino", "Firenze"]):
-        active = st.session_state.citta_sel == city
-        with btn_cols[i]:
-            if st.button(
-                city,
-                key=f"btn_{city}",
-                use_container_width=True,
-                type="primary" if active else "secondary",
-            ):
-                st.session_state.citta_sel = city
-    citta_sel = st.session_state.citta_sel
-
 with col_time:
     st.markdown(f"""
-    <div style="text-align:right;padding-top:8px">
+    <div style="text-align:right;padding-top:14px">
         <div class="topbar-time">🕐 {now_str}</div>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div style='border-bottom:1px solid #1a1a24;margin-bottom:1rem'></div>",
+# City cards — selezione visiva
+if "citta_sel" not in st.session_state:
+    st.session_state.citta_sel = "Bologna"
+
+CITY_META = {
+    "Bologna": {"flag": "🅱", "sub": "3 parking"},
+    "Torino":  {"flag": "🔺", "sub": "36 parking"},
+    "Firenze": {"flag": "🌸", "sub": "13 parking"},
+}
+
+c1, c2, c3 = st.columns(3)
+for col, city in zip([c1, c2, c3], ["Bologna", "Torino", "Firenze"]):
+    with col:
+        active = st.session_state.citta_sel == city
+        if st.button(
+            f"{CITY_META[city]['flag']}  {city}  ·  {CITY_META[city]['sub']}",
+            key=f"btn_{city}",
+            use_container_width=True,
+            type="primary" if active else "secondary",
+        ):
+            st.session_state.citta_sel = city
+
+citta_sel = st.session_state.citta_sel
+st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.6rem 0 1rem 0'></div>",
             unsafe_allow_html=True)
 
 
@@ -581,6 +720,37 @@ if not df_live.empty:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Insight analitici dallo storico di oggi ──
+    df_oggi = query_storico(citta_sel, str(datetime.now().date()))
+    if not df_oggi.empty:
+        df_oggi["liberi"] = pd.to_numeric(df_oggi["liberi"], errors="coerce")
+        df_oggi["totali"] = pd.to_numeric(df_oggi["totali"], errors="coerce")
+        df_oggi = df_oggi.dropna(subset=["liberi", "totali"])
+        df_oggi = df_oggi[df_oggi["totali"] > 0]
+        if not df_oggi.empty:
+            df_oggi["occ_pct"] = (1 - df_oggi["liberi"] / df_oggi["totali"]) * 100
+            peak_occ   = int(df_oggi["occ_pct"].max())
+            avg_occ    = int(df_oggi["occ_pct"].mean())
+            n_rilevaz  = len(df_oggi["timestamp"].unique()) if "timestamp" in df_oggi.columns else "—"
+            peak_cls   = "orange" if peak_occ < 85 else "red"
+            avg_cls    = "green" if avg_occ < 60 else "orange"
+            st.markdown(f"""
+            <div class="insight-grid">
+                <div class="insight-card">
+                    <div class="insight-val {peak_cls}">{peak_occ}%</div>
+                    <div class="insight-label">Peak occupancy oggi</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-val {avg_cls}">{avg_occ}%</div>
+                    <div class="insight-label">Media occupazione</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-val">{n_rilevaz}</div>
+                    <div class="insight-label">Rilevazioni oggi</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
     # Alert soft alta occupazione
     critici = df_live[df_live.apply(
