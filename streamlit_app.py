@@ -19,13 +19,11 @@ st.set_page_config(
 LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
 DB_NAME  = "storico_parcheggi.db"
 
-COORDINATE = {
-    "Piazza VIII Agosto":    [44.5011, 11.3438],
-    "Riva Reno":             [44.4981, 11.3353],
-    "Autostazione":          [44.5049, 11.3456],
-    "Staveco":               [44.4842, 11.3429],
-    "Parcheggio Aeroporto":  [44.5308, 11.2912],
-    "Tanari":                [44.5056, 11.3268],
+# Coordinate di fallback (l'API le fornisce già nel campo "coordinate")
+COORDINATE_FALLBACK = {
+    "VIII Agosto":  [44.500297, 11.345368],
+    "Riva Reno":    [44.501153, 11.336062],
+    "Autostazione": [44.504422, 11.346514],
 }
 
 PALETTE = ["#ff8c00", "#00c864", "#00b4ff", "#ff3c3c", "#b57fff", "#ffd700"]
@@ -131,14 +129,20 @@ def fetch_live() -> pd.DataFrame:
         r = requests.get(url, timeout=10).json()
         rows = []
         for rec in r.get("results", []):
-            tot = int(rec.get("posti_totali") or 0)
-            lib = int(rec.get("posti_liberi") or 0)
-            if tot > 0:
+            tot  = int(rec.get("posti_totali") or 0)
+            lib  = int(rec.get("posti_liberi") or 0)
+            nome = rec.get("parcheggio", "")
+            coord = rec.get("coordinate") or {}
+            lat  = coord.get("lat") or COORDINATE_FALLBACK.get(nome, [44.499, 11.343])[0]
+            lon  = coord.get("lon") or COORDINATE_FALLBACK.get(nome, [44.499, 11.343])[1]
+            if tot > 0 and nome:
                 rows.append({
-                    "nome":     rec.get("parcheggio", ""),
+                    "nome":     nome,
                     "liberi":   lib,
                     "occupati": tot - lib,
                     "totali":   tot,
+                    "lat":      lat,
+                    "lon":      lon,
                 })
         return pd.DataFrame(rows)
     except Exception as e:
@@ -233,40 +237,38 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown('<div class="section-label">Distribuzione geografica</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-title" style="margin-bottom:0.8rem">MAPPA PARCHEGGI</div>', unsafe_allow_html=True)
 
-occ_map = {}
-if not df_live.empty:
-    for row in df_live.itertuples():
-        occ_map[row.nome] = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-
 m = folium.Map(location=[44.499, 11.343], zoom_start=14, tiles="cartodbdark_matter")
 
-for nome, coords in COORDINATE.items():
-    occ   = occ_map.get(nome, 0)
-    color = "#00c864" if occ < 60 else "#ffa000" if occ < 85 else "#ff3c3c"
-    lat, lon = coords
-    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
-    popup_html = (
-        f"<div style='font-family:monospace;font-size:12px;min-width:160px;line-height:1.6'>"
-        f"<b style='font-size:13px'>{nome}</b><br>"
-        f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
-        f"<a href='{maps_url}' target='_blank' "
-        f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
-        f"background:{color}22;border:1px solid {color}66;"
-        f"color:{color};text-decoration:none;border-radius:3px;"
-        f"font-size:11px;font-weight:bold'>"
-        f"&#x1F9ED; Naviga con Maps</a>"
-        f"</div>"
-    )
-    folium.CircleMarker(
-        location=coords, radius=14,
-        color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
-        tooltip=folium.Tooltip(f"<b>{nome}</b><br>{occ}% occupato — clicca per navigare"),
-        popup=folium.Popup(popup_html, max_width=220)
-    ).add_to(m)
-    folium.CircleMarker(
-        location=coords, radius=20,
-        color=color, fill=False, weight=1, opacity=0.3
-    ).add_to(m)
+if not df_live.empty:
+    for row in df_live.itertuples():
+        occ   = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+        color = "#00c864" if occ < 60 else "#ffa000" if occ < 85 else "#ff3c3c"
+        lat, lon = row.lat, row.lon
+        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+        liberi_txt = f"{row.liberi} / {row.totali} posti liberi"
+        popup_html = (
+            f"<div style='font-family:monospace;font-size:12px;min-width:165px;line-height:1.7'>"
+            f"<b style='font-size:13px'>{row.nome}</b><br>"
+            f"<span style='color:#888'>{liberi_txt}</span><br>"
+            f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
+            f"<a href='{maps_url}' target='_blank' "
+            f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
+            f"background:{color}22;border:1px solid {color}66;"
+            f"color:{color};text-decoration:none;border-radius:3px;"
+            f"font-size:11px;font-weight:bold'>"
+            f"&#x1F9ED; Naviga con Maps</a>"
+            f"</div>"
+        )
+        folium.CircleMarker(
+            location=[lat, lon], radius=14,
+            color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
+            tooltip=folium.Tooltip(f"<b>{row.nome}</b> — {occ}% occupato"),
+            popup=folium.Popup(popup_html, max_width=230)
+        ).add_to(m)
+        folium.CircleMarker(
+            location=[lat, lon], radius=20,
+            color=color, fill=False, weight=1, opacity=0.3
+        ).add_to(m)
 
 folium_static(m, width=1100, height=420)
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -329,9 +331,10 @@ with col_f:
                                  label_visibility="collapsed")
         st.session_state.data_att = data_sel
     with fc2:
+        nomi_disponibili = list(df_live["nome"].unique()) if not df_live.empty else []
         parcheggio_sel = st.selectbox(
             "Parcheggio",
-            options=["Tutti"] + list(COORDINATE.keys()),
+            options=["Tutti"] + nomi_disponibili,
             label_visibility="collapsed"
         )
 
