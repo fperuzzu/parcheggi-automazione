@@ -266,6 +266,32 @@ div[data-baseweb="select"] > div,
 }
 .park-card-bar-fill { height:100%; border-radius:1px; }
 
+/* TAB BUTTONS */
+[data-testid="stButton"] > button {
+    font-family:'DM Mono',monospace !important;
+    font-size:0.72rem !important;
+    letter-spacing:0.1em !important;
+    text-transform:uppercase !important;
+    border-radius:3px !important;
+    padding:0.3rem 0 !important;
+    transition:all 0.15s !important;
+}
+[data-testid="stButton"] > button[kind="primary"] {
+    background:#ff8c00 !important;
+    border-color:#ff8c00 !important;
+    color:#0a0a0f !important;
+    font-weight:600 !important;
+}
+[data-testid="stButton"] > button[kind="secondary"] {
+    background:transparent !important;
+    border-color:#222230 !important;
+    color:#555 !important;
+}
+[data-testid="stButton"] > button[kind="secondary"]:hover {
+    border-color:#444 !important;
+    color:#aaa !important;
+}
+
 /* ALERT soft */
 .alert-soft {
     display:flex; align-items:center; gap:8px;
@@ -461,10 +487,21 @@ with col_brand:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    citta_sel = st.radio(
-        "Città", options=["Bologna", "Torino", "Firenze"],
-        horizontal=True, label_visibility="collapsed",
-    )
+    # Tab-style buttons via session_state
+    if "citta_sel" not in st.session_state:
+        st.session_state.citta_sel = "Bologna"
+    btn_cols = st.columns(3)
+    for i, city in enumerate(["Bologna", "Torino", "Firenze"]):
+        active = st.session_state.citta_sel == city
+        with btn_cols[i]:
+            if st.button(
+                city,
+                key=f"btn_{city}",
+                use_container_width=True,
+                type="primary" if active else "secondary",
+            ):
+                st.session_state.citta_sel = city
+    citta_sel = st.session_state.citta_sel
 
 with col_time:
     st.markdown(f"""
@@ -590,47 +627,45 @@ if live_disponibile:
 # MAPPA + BAR CHART — solo se live disponibile
 # ─────────────────────────────────────────────
 if live_disponibile:
-    st.markdown('<div class="section-label" style="margin-bottom:4px">Mappa</div>',
-                unsafe_allow_html=True)
-    centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
-    m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
-    for row in df_live.itertuples():
-        occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-        aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
-    folium_static(m, width=1200, height=480)
+    col_graf, col_map = st.columns([2, 3])
+
+    with col_graf:
+        st.markdown('<div class="section-label">Occupazione attuale</div>', unsafe_allow_html=True)
+        df_bar = df_live.copy()
+        df_bar["pct"] = (df_bar["occupati"] / df_bar["totali"] * 100).astype(int)
+        df_bar = df_bar.sort_values("pct", ascending=True)
+        fig_bar = go.Figure(go.Bar(
+            x=list(df_bar["pct"]),
+            y=list(df_bar["nome"]),
+            orientation="h",
+            marker_color=[occ_color(p) for p in df_bar["pct"]],
+            marker_line_width=0,
+            text=[f"{p}%" for p in df_bar["pct"]],
+            textposition="outside",
+            textfont=dict(size=11, color="#888"),
+        ))
+        fig_bar.update_xaxes(range=[0, 115], showgrid=True, gridcolor="#1e1e2e",
+                             ticksuffix="%", zeroline=False, tickfont=dict(size=10, color="#666"))
+        fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=11, color="#bbb"))
+        fig_bar.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            height=max(320, len(df_bar) * 36),
+            margin=dict(l=10, r=50, t=10, b=10),
+            bargap=0.3, showlegend=False,
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col_map:
+        st.markdown('<div class="section-label">Mappa</div>', unsafe_allow_html=True)
+        centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
+        m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
+        for row in df_live.itertuples():
+            occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+            aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
+        folium_static(m, width=680, height=max(320, len(df_bar) * 36))
+
     st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
                 unsafe_allow_html=True)
-
-if live_disponibile:
-    st.markdown('<div class="section-label">Snapshot attuale</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title" style="margin-bottom:0.8rem">OCCUPAZIONE PER PARCHEGGIO</div>',
-                unsafe_allow_html=True)
-
-    df_bar = df_live.copy()
-    df_bar["pct"] = (df_bar["occupati"] / df_bar["totali"] * 100).astype(int)
-    df_bar = df_bar.sort_values("pct", ascending=True)
-
-    fig_bar = go.Figure(go.Bar(
-        x=list(df_bar["pct"]),
-        y=list(df_bar["nome"]),
-        orientation="h",
-        marker_color=[occ_color(p) for p in df_bar["pct"]],
-        marker_line_width=0,
-        text=[f"{p}%" for p in df_bar["pct"]],
-        textposition="outside",
-        textfont=dict(size=11, color="#888"),
-    ))
-    fig_bar.update_xaxes(range=[0, 115], showgrid=True, gridcolor="#1e1e2e",
-                         ticksuffix="%", zeroline=False, tickfont=dict(size=10))
-    fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=11, color="#bbb"))
-    fig_bar.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        height=max(200, len(df_bar) * 36),
-        margin=dict(l=10, r=50, t=10, b=10),
-        bargap=0.3, showlegend=False,
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
-    st.markdown("<hr>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # TREND STORICO
@@ -674,10 +709,10 @@ if not df_storico.empty:
         traces.append(go.Scatter(
             x=list(d["timestamp"]),
             y=list(d["liberi"].astype(int)),
-            name=p, mode="lines",
+            name=p, mode="lines+markers",
             line=dict(color=c, width=2),
-            fill="tozeroy",
-            fillcolor=hex_to_rgba(c, 0.07),
+            marker=dict(size=4, color=c),
+            # Niente fill — le aree colorate si sovrapponevano nascondendo le linee
         ))
 
     if traces:
