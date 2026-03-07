@@ -197,6 +197,84 @@ div[data-baseweb="select"] > div,
             font-family:'DM Mono',monospace; font-size:0.75rem; letter-spacing:0.1em;
             text-transform:uppercase; margin-right:6px;
             border:1px solid #1e1e2e; color:#666; }
+
+/* TOP BAR */
+.topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0.55rem 0 0.55rem 0; margin-bottom:0.5rem;
+    border-bottom:1px solid #1a1a24;
+}
+.topbar-brand {
+    display:flex; align-items:center; gap:10px;
+}
+.topbar-title {
+    font-family:'DM Mono',monospace; font-size:0.85rem;
+    font-weight:500; color:#e8e6e0; letter-spacing:0.06em;
+}
+.topbar-sub {
+    font-family:'DM Mono',monospace; font-size:0.62rem;
+    color:#444; letter-spacing:0.08em; margin-top:1px;
+}
+.topbar-time {
+    font-family:'DM Mono',monospace; font-size:0.65rem; color:#444;
+}
+
+/* KPI CARDS */
+.kpi-grid { display:flex; gap:12px; margin:0.8rem 0 1.2rem 0; }
+.kpi-card {
+    flex:1; background:#0f0f18; border:1px solid #1e1e2e;
+    border-radius:4px; padding:1rem 1.2rem;
+    transition:border-color 0.2s;
+}
+.kpi-card:hover { border-color:#ff8c0055; }
+.kpi-num {
+    font-family:'Bebas Neue',sans-serif; font-size:2.6rem;
+    line-height:1; color:#e8e6e0; letter-spacing:0.02em;
+}
+.kpi-num.green  { color:#00c864; }
+.kpi-num.orange { color:#ffa000; }
+.kpi-num.red    { color:#ff3c3c; }
+.kpi-label {
+    font-family:'DM Mono',monospace; font-size:0.62rem;
+    color:#555; text-transform:uppercase; letter-spacing:0.12em;
+    margin-top:4px;
+}
+
+/* PARKING CARDS */
+.park-grid { display:flex; flex-wrap:wrap; gap:10px; margin:0.6rem 0 1.2rem 0; }
+.park-card {
+    background:#0f0f18; border:1px solid #1e1e2e; border-radius:4px;
+    padding:0.85rem 1rem; min-width:140px; flex:1;
+    transition:border-color 0.2s, background 0.2s;
+}
+.park-card:hover { background:#141420; border-color:#333; }
+.park-card-name {
+    font-family:'DM Mono',monospace; font-size:0.68rem;
+    color:#777; text-transform:uppercase; letter-spacing:0.1em;
+    margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.park-card-num {
+    font-family:'Bebas Neue',sans-serif; font-size:2rem;
+    line-height:1; margin-bottom:2px;
+}
+.park-card-sub {
+    font-family:'DM Mono',monospace; font-size:0.65rem; color:#555;
+}
+.park-card-bar {
+    height:2px; border-radius:1px; margin-top:8px; background:#1a1a24;
+    overflow:hidden;
+}
+.park-card-bar-fill { height:100%; border-radius:1px; }
+
+/* ALERT soft */
+.alert-soft {
+    display:flex; align-items:center; gap:8px;
+    background:#1a1200; border:1px solid #ffa00025;
+    border-left:3px solid #ffa000;
+    padding:0.5rem 0.9rem; border-radius:3px;
+    margin-bottom:0.9rem;
+    font-family:'DM Mono',monospace; font-size:0.72rem; color:#cc8800;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -386,33 +464,36 @@ FETCH_MAP = {
 
 
 # ─────────────────────────────────────────────
-# HEADER
+# TOP BAR
 # ─────────────────────────────────────────────
-col_logo, col_title, col_stats = st.columns([1, 5, 3])
+now_str = datetime.now().strftime("%d %b %Y · %H:%M")
+col_brand, col_nav, col_time = st.columns([3, 4, 2])
 
-with col_logo:
-    st.image(LOGO_URL, width=56)
-
-with col_title:
-    now_str = datetime.now().strftime("%d %b %Y  —  %H:%M")
+with col_brand:
     st.markdown(f"""
-    <div class="section-label">Sistema di monitoraggio urbano · Bologna · Torino · Firenze</div>
-    <div class="section-title">MONITORAGGIO PARCHEGGI</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#555;margin-top:4px">
-        Aggiornato {now_str}
+    <div class="topbar-brand" style="padding-top:4px">
+        <div>
+            <div class="topbar-title">🅿 Parking Monitor Italia</div>
+            <div class="topbar-sub">Bologna · Torino · Firenze</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# Selezione città nella colonna destra dell'header
-with col_stats:
+with col_nav:
     citta_sel = st.radio(
-        "Città",
-        options=["Bologna", "Torino", "Firenze"],
-        horizontal=True,
-        label_visibility="collapsed",
+        "Città", options=["Bologna", "Torino", "Firenze"],
+        horizontal=True, label_visibility="collapsed",
     )
 
-st.markdown("<hr>", unsafe_allow_html=True)
+with col_time:
+    st.markdown(f"""
+    <div style="text-align:right;padding-top:8px">
+        <div class="topbar-time">🕐 {now_str}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<div style='border-bottom:1px solid #1a1a24;margin-bottom:1rem'></div>",
+            unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
@@ -452,73 +533,92 @@ if not live_disponibile:
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# STATISTICHE GLOBALI CITTÀ
+# KPI + ALERT
 # ─────────────────────────────────────────────
 if not df_live.empty:
     tot_lib  = int(df_live["liberi"].sum())
     tot_occ  = int(df_live["occupati"].sum())
     tot_tot  = int(df_live["totali"].sum())
     pct_glob = int(tot_occ / tot_tot * 100) if tot_tot > 0 else 0
-    pill_cls = "pill-green" if pct_glob < 60 else "pill-orange" if pct_glob < 85 else "pill-red"
+    n_park   = len(df_live)
+    occ_cls  = "green" if pct_glob < 60 else "orange" if pct_glob < 85 else "red"
 
     st.markdown(f"""
-    <div style="text-align:right;padding-bottom:0.8rem">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:#e8e6e0">
-            {tot_lib:,}
-            <span style="font-size:1rem;color:#555;font-family:'DM Mono',monospace"> posti liberi</span>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-num green">{tot_lib:,}</div>
+            <div class="kpi-label">Posti liberi</div>
         </div>
-        <span class="pill {pill_cls}">{citta_sel.upper()} — {pct_glob}% OCCUPATO</span>
+        <div class="kpi-card">
+            <div class="kpi-num {occ_cls}">{pct_glob}%</div>
+            <div class="kpi-label">Occupazione media</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-num">{n_park}</div>
+            <div class="kpi-label">Parcheggi monitorati</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-num">{tot_tot:,}</div>
+            <div class="kpi-label">Capacità totale</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Alert alta occupazione
+    # Alert soft alta occupazione
     critici = df_live[df_live.apply(
         lambda r: int(r["occupati"] / r["totali"] * 100) >= 85, axis=1
     )]
     if not critici.empty:
-        nomi_crit = ", ".join(critici["nome"].tolist())
-        st.markdown(f"""
-        <div style="background:#1a0a0a;border:1px solid #ff3c3c33;border-left:3px solid #ff3c3c;
-                    padding:0.7rem 1rem;border-radius:2px;margin-bottom:1rem;
-                    font-family:'DM Mono',monospace;font-size:0.78rem;color:#ff7070">
-            ⚠️ &nbsp; ALTA OCCUPAZIONE → {nomi_crit}
-        </div>
-        """, unsafe_allow_html=True)
+        for _, cr in critici.iterrows():
+            occ_cr = int(cr["occupati"] / cr["totali"] * 100)
+            st.markdown(f"""
+            <div class="alert-soft">
+                ⚠ Alta occupazione ({occ_cr}%) — <b>{cr["nome"]}</b>
+                &nbsp;·&nbsp; {cr["liberi"]} posti rimasti
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
-# METRIC CARDS
+# PARKING CARDS
 # ─────────────────────────────────────────────
 if live_disponibile:
-    st.markdown('<div class="section-label">Disponibilità in tempo reale</div>', unsafe_allow_html=True)
-    n_cols = min(len(df_live), 6)
-    for chunk_start in range(0, len(df_live), n_cols):
-        chunk = df_live.iloc[chunk_start:chunk_start + n_cols]
-        cols  = st.columns(len(chunk))
-        for i, row in enumerate(chunk.itertuples()):
-            occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-            dc  = "normal" if occ < 60 else "off" if occ < 85 else "inverse"
-            with cols[i]:
-                st.metric(label=row.nome, value=row.liberi,
-                          delta=f"{occ}% occupato", delta_color=dc)
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown('<div class="section-label" style="margin-bottom:4px">Parcheggi</div>',
+                unsafe_allow_html=True)
+    cards_html = '<div class="park-grid">'
+    for row in df_live.itertuples():
+        occ   = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+        color = "#00c864" if occ < 60 else "#ffa000" if occ < 85 else "#ff3c3c"
+        cards_html += f"""
+        <div class="park-card" style="border-color:{color}22">
+            <div class="park-card-name">{row.nome}</div>
+            <div class="park-card-num" style="color:{color}">{row.liberi}</div>
+            <div class="park-card-sub">{occ}% occupato · {row.totali} tot</div>
+            <div class="park-card-bar">
+                <div class="park-card-bar-fill"
+                     style="width:{occ}%;background:{color}"></div>
+            </div>
+        </div>"""
+    cards_html += '</div>'
+    st.markdown(cards_html, unsafe_allow_html=True)
+    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
+                unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
 # MAPPA + BAR CHART — solo se live disponibile
 # ─────────────────────────────────────────────
 if live_disponibile:
-    st.markdown('<div class="section-label">Distribuzione geografica</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-title" style="margin-bottom:0.8rem">MAPPA {citta_sel.upper()}</div>',
+    st.markdown('<div class="section-label" style="margin-bottom:4px">Mappa</div>',
                 unsafe_allow_html=True)
-
     centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
     m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
     for row in df_live.itertuples():
         occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
         aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
-    folium_static(m, width=1100, height=420)
-    st.markdown("<hr>", unsafe_allow_html=True)
+    folium_static(m, width=1200, height=480)
+    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
+                unsafe_allow_html=True)
 
 if live_disponibile:
     st.markdown('<div class="section-label">Snapshot attuale</div>', unsafe_allow_html=True)
