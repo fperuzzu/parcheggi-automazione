@@ -243,15 +243,25 @@ m = folium.Map(location=[44.499, 11.343], zoom_start=14, tiles="cartodbdark_matt
 for nome, coords in COORDINATE.items():
     occ   = occ_map.get(nome, 0)
     color = "#00c864" if occ < 60 else "#ffa000" if occ < 85 else "#ff3c3c"
+    lat, lon = coords
+    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+    popup_html = (
+        f"<div style='font-family:monospace;font-size:12px;min-width:160px;line-height:1.6'>"
+        f"<b style='font-size:13px'>{nome}</b><br>"
+        f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
+        f"<a href='{maps_url}' target='_blank' "
+        f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
+        f"background:{color}22;border:1px solid {color}66;"
+        f"color:{color};text-decoration:none;border-radius:3px;"
+        f"font-size:11px;font-weight:bold'>"
+        f"&#x1F9ED; Naviga con Maps</a>"
+        f"</div>"
+    )
     folium.CircleMarker(
         location=coords, radius=14,
         color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
-        tooltip=folium.Tooltip(f"<b>{nome}</b><br>Occupazione: {occ}%"),
-        popup=folium.Popup(
-            f"<div style='font-family:monospace;font-size:12px'>"
-            f"<b>{nome}</b><br>Occupazione: <b style='color:{color}'>{occ}%</b></div>",
-            max_width=200
-        )
+        tooltip=folium.Tooltip(f"<b>{nome}</b><br>{occ}% occupato — clicca per navigare"),
+        popup=folium.Popup(popup_html, max_width=220)
     ).add_to(m)
     folium.CircleMarker(
         location=coords, radius=20,
