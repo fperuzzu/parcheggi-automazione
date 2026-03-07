@@ -2,33 +2,42 @@ name: Auto Update Parcheggi
 
 on:
   schedule:
-    - cron: '0,30 * * * *'
-  workflow_dispatch:
+    - cron: '0,30 * * * *'   # ogni 30 minuti
+  workflow_dispatch:           # run manuale dalla UI GitHub
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4          # v4 è l'attuale stabile
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5      # v5 è l'attuale stabile
         with:
-          python-version: '3.x'
+          python-version: '3.11'           # 3.14 è pre-release, meglio 3.11 LTS
 
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run script
-        run: python motore_db.py
-
-      - name: Save changes
+      - name: Run scraper
         run: |
-          git config --global user.name "GitHub Action"
+          # Ogni domenica a mezzanotte pulisce i record > 30 giorni
+          DAY=$(date +%u)   # 1=lunedì … 7=domenica
+          HOUR=$(date +%H)
+          if [ "$DAY" = "7" ] && [ "$HOUR" = "00" ]; then
+            python motore_db.py --pulisci --retention 30
+          else
+            python motore_db.py
+          fi
+
+      - name: Commit e push
+        run: |
+          git config --global user.name  "GitHub Action"
           git config --global user.email "action@github.com"
-          git add storico_parcheggi.db index.html
-          git commit -m "Update: $(date)" || echo "No changes"
+          git add storico_parcheggi.db
+          git commit -m "db: update $(date +'%Y-%m-%d %H:%M')" || echo "Nessuna modifica"
           git push
