@@ -1,6 +1,6 @@
 {
-  "name": "Parking Monitor Italia",
-  "short_name": "Parking IT",
+  "name": "ParkPulse",
+  "short_name": "ParkPulse",
   "description": "Monitoraggio parcheggi in tempo reale — Bologna, Torino, Firenze",
   "start_url": "/parcheggi-automazione/",
   "scope": "/parcheggi-automazione/",
