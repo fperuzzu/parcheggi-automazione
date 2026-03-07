@@ -217,9 +217,8 @@ def aggiorna_torino(cur: sqlite3.Cursor, now: str) -> int:
              [(c.tag.split("}")[-1], c.attrib, c.text) for c in first][:5])
 
     for pk in pk_elements:
-        attrib = pk.attrib  # attributi XML: {"name": "...", "free_slots": "12", ...}
+        attrib = pk.attrib
 
-        # Prova prima attributi, poi tag figli, poi text content
         def get_val(*keys):
             for k in keys:
                 v = attrib.get(k) or pk.findtext(f"{NS}{k}")
@@ -227,11 +226,16 @@ def aggiorna_torino(cur: sqlite3.Cursor, now: str) -> int:
                     return v
             return None
 
-        nome   = get_val("name", "Name", "description", "Description", "id", "Id")
-        liberi = get_val("free_slots", "free", "Free", "FreeSlots", "free_slots_rt")
-        totali = get_val("total_slots", "total", "Total", "TotalSlots", "capacity")
+        nome   = get_val("Name", "name", "Description", "description")
+        liberi = get_val("Free", "free", "free_slots")
+        totali = get_val("Total", "total", "total_slots", "capacity")
 
         if not nome:
+            continue
+        # Skip parcheggi senza dati live (chiusi o non monitorati)
+        if liberi is None or totali is None:
+            log.debug("  Torino › %s: Free/Total assenti (status=%s), saltato",
+                      nome, attrib.get("status", "?"))
             continue
         if salva(cur, "Torino", nome, liberi, totali, now):
             salvati += 1
@@ -246,19 +250,18 @@ def aggiorna_torino(cur: sqlite3.Cursor, now: str) -> int:
 # Fonte capacità: sito ufficiale Firenze Parcheggi S.p.A.
 # ─────────────────────────────────────────────
 FIRENZE_CAPACITA = {
-    "Parterre":             630,
-    "Palazzo di Giustizia": 480,
-    "Oltrarno":             392,
-    "Fortezza da Basso":    650,
-    "Stazione":             600,  # Stazione SMN
-    "Stazione Binario 16":  170,
-    "Careggi":              340,
-    "Beccaria":             800,
-    "Alberti":              540,
-    "San Lorenzo":          165,
-    "Sant'Ambrogio":        398,
-    "Porta al Prato":       490,
-    "Pieraccini":           400,
+    "Parterre":      630,
+    "Palazzo":       480,   # "Palazzo di Giustizia"
+    "Oltrarno":      392,
+    "Fortezza":      650,   # "Fortezza da Basso"
+    "Stazione":      600,   # "Stazione SMN" / "Stazione Binario 16"
+    "Careggi":       900,   # "Careggi CTO" — capacita reale ~900
+    "Beccaria":      800,
+    "Alberti":       540,
+    "San Lorenzo":   165,
+    "Ambrogio":      398,   # match su "Ambrogio" evita problemi apostrofo
+    "Porta al Prato":490,
+    "Pieraccini":    800,   # "Pieraccini Meyer" — capacita reale ~800
 }
 def aggiorna_firenze(cur: sqlite3.Cursor, now: str) -> int:
     urls = [
