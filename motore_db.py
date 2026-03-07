@@ -57,22 +57,25 @@ class TursoDB:
         }
 
     def _run(self, requests_list: list) -> dict:
-        requests_list.append({"type": "close"})
+        # Crea copia per non modificare la lista originale
+        payload = list(requests_list) + [{"type": "close"}]
         r = requests.post(
             f"{self.base}/v2/pipeline",
-            json={"requests": requests_list},
+            json={"requests": payload},
             headers=self.headers,
             timeout=30,
         )
+        if not r.ok:
+            log.error("  Turso HTTP %s: %s", r.status_code, r.text[:300])
         r.raise_for_status()
         return r.json()
 
     def _stmt(self, sql: str, params: list = None) -> dict:
         stmt = {"type": "execute", "stmt": {"sql": sql}}
         if params:
+            # Turso vuole sempre "value" come stringa
             stmt["stmt"]["args"] = [
-                {"type": "integer", "value": p} if isinstance(p, int)
-                else {"type": "text", "value": str(p)}
+                {"type": "text", "value": str(p)}
                 for p in params
             ]
         return stmt
