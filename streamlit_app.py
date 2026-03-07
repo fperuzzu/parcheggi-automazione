@@ -229,15 +229,34 @@ def aggiungi_marker(m, lat, lon, nome, occ, liberi, totali):
         f"font-size:11px;font-weight:bold'>&#x1F9ED; Naviga con Maps</a>"
         f"</div>"
     )
+    # Pallino colorato con numero posti liberi al centro
     folium.CircleMarker(
-        location=[lat, lon], radius=14,
-        color=color, fill=True, fill_color=color, fill_opacity=0.25, weight=2,
-        tooltip=folium.Tooltip(f"<b>{nome}</b> — {occ}% occupato"),
+        location=[lat, lon], radius=22,
+        color=color, fill=True, fill_color="#0a0a0f", fill_opacity=0.85, weight=2,
+        tooltip=folium.Tooltip(f"<b>{nome}</b> — {liberi} liberi · {occ}% occupato"),
         popup=folium.Popup(popup_html, max_width=230)
     ).add_to(m)
+    # Numero posti liberi sopra il pallino
+    label_size  = "11" if liberi < 100 else "9"
+    folium.Marker(
+        location=[lat, lon],
+        icon=folium.DivIcon(
+            html=(
+                f"<div style='"
+                f"width:44px;height:44px;margin-left:-22px;margin-top:-22px;"
+                f"display:flex;align-items:center;justify-content:center;"
+                f"font-family:monospace;font-weight:bold;"
+                f"font-size:{label_size}px;color:{color};pointer-events:none;"
+                f"'>{liberi}</div>"
+            ),
+            icon_size=(44, 44),
+            icon_anchor=(22, 22),
+        )
+    ).add_to(m)
+    # Alone esterno
     folium.CircleMarker(
-        location=[lat, lon], radius=20,
-        color=color, fill=False, weight=1, opacity=0.3
+        location=[lat, lon], radius=28,
+        color=color, fill=False, weight=1, opacity=0.2
     ).add_to(m)
 
 
@@ -582,14 +601,20 @@ if not df_storico.empty:
 
     if traces:
         fig = go.Figure(data=traces)
-        fig.update_xaxes(showgrid=True, gridcolor="#1a1a24",
-                         zeroline=False, tickformat="%H:%M")
-        fig.update_yaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False)
+        fig.update_xaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False,
+                         tickformat="%H:%M", tickfont=dict(color="#888", size=11))
+        fig.update_yaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False,
+                         tickfont=dict(color="#888", size=11))
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             height=360, margin=dict(l=10, r=10, t=20, b=10),
             hovermode="x unified", showlegend=True,
-            legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1e1e2e", borderwidth=1),
+            legend=dict(
+                bgcolor="rgba(10,10,20,0.92)",
+                bordercolor="#333344",
+                borderwidth=1,
+                font=dict(color="#cccccc", size=12),
+            ),
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
