@@ -195,42 +195,71 @@ def aggiorna_torino(cur: sqlite3.Cursor, now: str) -> int:
     # Cerchiamo con wildcard namespace {*}
     NS = "{https://simone.5t.torino.it/ns/traffic_data.xsd}"
 
+    # I dati live sono in attributi XML oppure in tag figli — proviamo entrambi
+    # Esempio struttura attesa:
+    #   <PK_data name="Parcheggio X" free_slots="12" total_slots="200"/>
+    #   oppure con attributi: free="12" total="200" id="..." description="..."
+
     salvati = 0
-    for pk in root.iter(f"{NS}PK_data"):
-        try:
-            nome   = pk.findtext(f"{NS}name") or pk.findtext(f"{NS}Name")
-            liberi = pk.findtext(f"{NS}free_slots") or pk.findtext(f"{NS}Free")
-            totali = pk.findtext(f"{NS}total_slots") or pk.findtext(f"{NS}Total")
+    pk_elements = list(root.iter(f"{NS}PK_data"))
 
-            # Se non trovati con i nomi attesi, logga i figli per debug
-            if nome is None:
-                figli = [child.tag.split("}")[-1] for child in pk]
-                log.warning("  Torino PK senza nome, tag figli: %s", figli)
-                continue
-        except AttributeError:
+    if not pk_elements:
+        # Struttura sconosciuta: logga tutto il documento per capire
+        all_tags = [(el.tag.split("}")[-1], el.attrib, el.text) for el in root.iter()]
+        log.warning("  Torino: nessun PK_data. Struttura XML: %s", all_tags[:20])
+        log.info("✓ Torino: 0 parcheggi salvati")
+        return 0
+
+    # Debug: mostra attributi e testo del primo PK_data
+    first = pk_elements[0]
+    log.info("  Torino: primo PK_data — attrib=%s text=%r figli=%s",
+             first.attrib, first.text,
+             [(c.tag.split("}")[-1], c.attrib, c.text) for c in first][:5])
+
+    for pk in pk_elements:
+        attrib = pk.attrib  # attributi XML: {"name": "...", "free_slots": "12", ...}
+
+        # Prova prima attributi, poi tag figli, poi text content
+        def get_val(*keys):
+            for k in keys:
+                v = attrib.get(k) or pk.findtext(f"{NS}{k}")
+                if v is not None:
+                    return v
+            return None
+
+        nome   = get_val("name", "Name", "description", "Description", "id", "Id")
+        liberi = get_val("free_slots", "free", "Free", "FreeSlots", "free_slots_rt")
+        totali = get_val("total_slots", "total", "Total", "TotalSlots", "capacity")
+
+        if not nome:
             continue
-        if nome and salva(cur, "Torino", nome, liberi, totali, now):
+        if salva(cur, "Torino", nome, liberi, totali, now):
             salvati += 1
-
-    if salvati == 0:
-        # Mostra tutti i sotto-tag del primo PK_data per capire i nomi reali
-        first = next(root.iter(f"{NS}PK_data"), None)
-        if first is not None:
-            figli = [(child.tag.split("}")[-1], child.text) for child in first]
-            log.warning("  Torino: tag del primo PK_data: %s", figli)
-        else:
-            log.warning("  Torino: nessun elemento PK_data trovato nel documento")
 
     log.info("✓ Torino: %d parcheggi salvati", salvati)
     return salvati
 
 
 # ─────────────────────────────────────────────
-# FIRENZE
-# Endpoint unico: ParkFreeSpot.json (tutti i parcheggi)
-# I ParkInfo_*.json individuali contengono solo metadati statici
-# Struttura attesa: GeoJSON FeatureCollection con properties live
+# FIRENZE — capacità fissa per parcheggio
+# ParkFreeSpot.json fornisce solo FreeSpot, non i totali
+# Fonte capacità: sito ufficiale Firenze Parcheggi S.p.A.
 # ─────────────────────────────────────────────
+FIRENZE_CAPACITA = {
+    "Parterre":             630,
+    "Palazzo di Giustizia": 480,
+    "Oltrarno":             392,
+    "Fortezza da Basso":    650,
+    "Stazione":             600,  # Stazione SMN
+    "Stazione Binario 16":  170,
+    "Careggi":              340,
+    "Beccaria":             800,
+    "Alberti":              540,
+    "San Lorenzo":          165,
+    "Sant'Ambrogio":        398,
+    "Porta al Prato":       490,
+    "Pieraccini":           400,
+}
 def aggiorna_firenze(cur: sqlite3.Cursor, now: str) -> int:
     urls = [
         "https://datastore.comune.fi.it/od/ParkFreeSpot.json",
@@ -273,48 +302,41 @@ def aggiorna_firenze(cur: sqlite3.Cursor, now: str) -> int:
     salvati = 0
     for feat in records:
         try:
-            # Gestisci sia GeoJSON (props nested) che lista flat
             if isinstance(feat, dict) and "properties" in feat:
                 props = feat["properties"]
             elif isinstance(feat, dict):
-                props = feat  # flat dict, i campi sono direttamente qui
+                props = feat
             else:
                 continue
 
-            # Campo nome — prova tutti i possibili nomi
-            nome = (props.get("NOME")         or props.get("nome")
-                    or props.get("NAME")       or props.get("name")
-                    or props.get("PARK_NAME")  or props.get("park_name")
-                    or props.get("Descrizione") or props.get("descrizione")
-                    or props.get("description"))
-
-            # Posti liberi
-            liberi = (props.get("POSTI_LIBERI") or props.get("posti_liberi")
-                      or props.get("FREE_SLOTS")  or props.get("free_slots")
-                      or props.get("FREE")         or props.get("free")
-                      or props.get("Liberi")       or props.get("liberi")
-                      or props.get("freeSlots"))
-
-            # Posti totali
-            totali = (props.get("POSTI_TOTALI")  or props.get("posti_totali")
-                      or props.get("TOTAL_SLOTS") or props.get("total_slots")
-                      or props.get("TOTAL")        or props.get("total")
-                      or props.get("Totali")       or props.get("totali")
-                      or props.get("CAPIENZA")     or props.get("capienza")
-                      or props.get("totalSlots"))
+            # Campi reali confermati dal log: Id, Name, FreeSpot, UpdateDate, Latitude, Longitude
+            nome   = props.get("Name") or props.get("name") or props.get("NOME")
+            liberi = props.get("FreeSpot") or props.get("free_spot") or props.get("FREE_SLOTS")
 
             if not nome:
-                log.warning("  Firenze: record senza nome (chiavi: %s)",
-                            list(props.keys())[:8])
+                log.warning("  Firenze: record senza nome (chiavi: %s)", list(props.keys()))
                 continue
-
-            if liberi is None or totali is None:
-                log.warning("  Firenze › %s: posti non trovati. Chiavi: %s",
+            if liberi is None:
+                log.warning("  Firenze › %s: FreeSpot non trovato. Chiavi: %s",
                             nome, list(props.keys()))
                 continue
 
-        except (AttributeError, KeyError) as e:
-            log.warning("  Firenze: feature malformata — %s", e)
+            # Cerca la capacità totale nel dizionario fisso
+            # Match parziale: "Stazione" trova "Stazione SMN", ecc.
+            totali = None
+            for chiave, cap in FIRENZE_CAPACITA.items():
+                if chiave.lower() in nome.lower() or nome.lower() in chiave.lower():
+                    totali = cap
+                    break
+
+            if totali is None:
+                log.warning("  Firenze › %s: capacità non in dizionario, uso FreeSpot come stima",
+                            nome)
+                # Fallback: salva comunque con totali=max(liberi,1) — dati parziali
+                totali = max(int(liberi), 1)
+
+        except (AttributeError, KeyError, ValueError) as e:
+            log.warning("  Firenze: record malformato — %s", e)
             continue
 
         if salva(cur, "Firenze", nome, liberi, totali, now):
