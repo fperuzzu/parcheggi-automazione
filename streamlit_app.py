@@ -10,7 +10,7 @@ Lo storico viene popolato da scraper_parcheggi.py
 """
 
 import streamlit as st
-import sqlite3
+import os
 import pandas as pd
 import plotly.graph_objects as go
 import folium
@@ -30,7 +30,6 @@ st.set_page_config(
 )
 
 LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
-DB_NAME  = "storico_parcheggi.db"
 PALETTE  = ["#ff8c00", "#00c864", "#00b4ff", "#ff3c3c", "#b57fff", "#ffd700"]
 
 # Coordinate fallback per Bologna (l'API le include già nella risposta)
@@ -85,6 +84,49 @@ MAPPA_CENTRI = {
     "Torino":  [45.070, 7.686],
     "Firenze": [43.775, 11.255],
 }
+
+# ─────────────────────────────────────────────
+# TURSO — lettura storico
+# ─────────────────────────────────────────────
+_TURSO_URL   = os.environ.get("TURSO_URL", "")
+_TURSO_TOKEN = os.environ.get("TURSO_TOKEN", "")
+
+@st.cache_data(ttl=300)
+def query_storico(citta: str, data_str: str) -> pd.DataFrame:
+    """Legge lo storico da Turso via HTTP API."""
+    if not _TURSO_URL or not _TURSO_TOKEN:
+        return pd.DataFrame()
+    try:
+        base = _TURSO_URL.replace("libsql://", "https://")
+        sql  = "SELECT citta, nome, liberi, totali, timestamp FROM storico WHERE citta=? AND timestamp LIKE ?"
+        payload = {
+            "requests": [
+                {"type": "execute", "stmt": {
+                    "sql": sql,
+                    "args": [
+                        {"type": "text", "value": citta},
+                        {"type": "text", "value": f"{data_str}%"},
+                    ]
+                }},
+                {"type": "close"}
+            ]
+        }
+        r = requests.post(
+            f"{base}/v2/pipeline",
+            json=payload,
+            headers={"Authorization": f"Bearer {_TURSO_TOKEN}",
+                     "Content-Type": "application/json"},
+            timeout=10,
+        )
+        r.raise_for_status()
+        result = r.json()
+        rows_data = result["results"][0]["response"]["result"]
+        cols  = [c["name"] for c in rows_data["cols"]]
+        rows  = [[v["value"] for v in row] for row in rows_data["rows"]]
+        return pd.DataFrame(rows, columns=cols)
+    except Exception as e:
+        st.warning(f"Errore lettura Turso: {e}")
+        return pd.DataFrame()
 
 # ─────────────────────────────────────────────
 # CSS
@@ -514,16 +556,7 @@ with col_f:
             label_visibility="collapsed",
         )
 
-try:
-    conn = sqlite3.connect(DB_NAME)
-    df_storico = pd.read_sql_query(
-        "SELECT * FROM storico WHERE citta=? AND timestamp LIKE ?",
-        conn, params=(citta_sel, f"{st.session_state.data_att}%")
-    )
-    conn.close()
-except Exception as e:
-    df_storico = pd.DataFrame()
-    st.warning(f"Errore lettura DB: {e}")
+df_storico = query_storico(citta_sel, str(st.session_state.data_att))
 
 if not df_storico.empty:
     df_storico["timestamp"] = pd.to_datetime(df_storico["timestamp"])
