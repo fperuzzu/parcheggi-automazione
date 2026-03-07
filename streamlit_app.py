@@ -295,27 +295,41 @@ def occ_color(pct: int) -> str:
 def aggiungi_marker(m, lat, lon, nome, occ, liberi, totali):
     color    = occ_color(occ)
     maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+
     popup_html = (
-        f"<div style='font-family:monospace;font-size:12px;min-width:165px;line-height:1.7'>"
-        f"<b style='font-size:13px'>{nome}</b><br>"
+        f"<div style='font-family:monospace;font-size:12px;min-width:170px;line-height:1.8;"
+        f"background:#0f0f18;padding:10px;border-radius:4px'>"
+        f"<b style='font-size:13px;color:#e8e6e0'>{nome}</b><br>"
         f"<span style='color:#888'>{liberi} / {totali} posti liberi</span><br>"
         f"Occupazione: <b style='color:{color}'>{occ}%</b><br>"
         f"<a href='{maps_url}' target='_blank' "
-        f"style='display:inline-block;margin-top:6px;padding:4px 10px;"
+        f"style='display:inline-block;margin-top:8px;padding:5px 12px;"
         f"background:{color}22;border:1px solid {color}66;"
         f"color:{color};text-decoration:none;border-radius:3px;"
         f"font-size:11px;font-weight:bold'>&#x1F9ED; Naviga con Maps</a>"
         f"</div>"
     )
-    # Pallino colorato con numero posti liberi al centro
+
+    # Alone esterno (non intercetta click)
+    folium.CircleMarker(
+        location=[lat, lon], radius=28,
+        color=color, fill=False, weight=1, opacity=0.2
+    ).add_to(m)
+
+    # Pallino principale con popup — tutto gestito qui, DivIcon sopra ha pointer-events:none
     folium.CircleMarker(
         location=[lat, lon], radius=22,
-        color=color, fill=True, fill_color="#0a0a0f", fill_opacity=0.85, weight=2,
-        tooltip=folium.Tooltip(f"<b>{nome}</b> — {liberi} liberi · {occ}% occupato"),
-        popup=folium.Popup(popup_html, max_width=230)
+        color=color, fill=True, fill_color="#0a0a0f", fill_opacity=0.88, weight=2,
+        tooltip=folium.Tooltip(
+            f"<b style='color:{color}'>{liberi}</b>"
+            f"<span style='color:#888'> liberi · {occ}% occ</span>",
+            style="background:#0f0f18;border:1px solid #333;color:#ccc;font-family:monospace;font-size:11px"
+        ),
+        popup=folium.Popup(popup_html, max_width=240)
     ).add_to(m)
-    # Numero posti liberi sopra il pallino
-    label_size  = "11" if liberi < 100 else "9"
+
+    # Numero al centro — pointer-events:none per non bloccare i click sul CircleMarker
+    label_size = "12" if liberi < 100 else "10" if liberi < 1000 else "8"
     folium.Marker(
         location=[lat, lon],
         icon=folium.DivIcon(
@@ -323,18 +337,13 @@ def aggiungi_marker(m, lat, lon, nome, occ, liberi, totali):
                 f"<div style='"
                 f"width:44px;height:44px;margin-left:-22px;margin-top:-22px;"
                 f"display:flex;align-items:center;justify-content:center;"
-                f"font-family:monospace;font-weight:bold;"
-                f"font-size:{label_size}px;color:{color};pointer-events:none;"
+                f"font-family:monospace;font-weight:bold;font-size:{label_size}px;"
+                f"color:{color};pointer-events:none;user-select:none;"
                 f"'>{liberi}</div>"
             ),
             icon_size=(44, 44),
             icon_anchor=(22, 22),
         )
-    ).add_to(m)
-    # Alone esterno
-    folium.CircleMarker(
-        location=[lat, lon], radius=28,
-        color=color, fill=False, weight=1, opacity=0.2
     ).add_to(m)
 
 
