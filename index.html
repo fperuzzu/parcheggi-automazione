@@ -1,91 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Parking Monitor Italia</title>
 
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>PeruLabTech | Smart Parking Dashboard</title>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
-        <style>
-            body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
-            .navbar { background: #00416A; border-bottom: 4px solid #007bff; }
-            .main-card { border: none; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); background: white; }
-            .table thead { background-color: #f8f9fa; border-top: 2px solid #dee2e6; }
-            .btn-streamlit { background-color: #ff4b4b; color: white; border-radius: 50px; padding: 12px 30px; font-weight: 600; text-decoration: none; transition: 0.3s; display: inline-block; }
-            .btn-streamlit:hover { background-color: #d43f3f; transform: translateY(-2px); color: white; box-shadow: 0 5px 15px rgba(255,75,75,0.4); }
-            .footer-text { font-size: 0.85rem; color: #adb5bd; }
-        </style>
-    </head>
-    <body>
-        <nav class="navbar navbar-dark py-3">
-            <div class="container d-flex justify-content-between">
-                <span class="navbar-brand fw-bold italic"><i class="fas fa-microchip me-2"></i>PERULABTECH <span class="fw-light">SMART CITY</span></span>
-                <span class="text-white-50 small">Monitor v1.2</span>
-            </div>
-        </nav>
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
 
-        <div class="container my-5">
-            <div class="row justify-content-center">
-                <div class="col-lg-9">
-                    <div class="main-card p-4 p-md-5">
-                        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                            <div>
-                                <h2 class="h4 m-0 text-dark">Disponibilità Parcheggi</h2>
-                                <p class="text-muted small mb-0">Città di Bologna</p>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge bg-light text-dark border"><i class="fas fa-clock me-1 text-primary"></i> Aggiornato: 03/03/2026 alle 16:07</span>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 50%;">Località</th>
-                                        <th class="text-center">Posti Liberi</th>
-                                        <th class="text-end">Stato</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    
-            <tr>
-                <td><i class="fas fa-location-dot text-primary me-2"></i><strong>Riva Reno</strong></td>
-                <td class="text-center"><span class="badge bg-success" style="font-size: 0.9rem;">286</span></td>
-                <td class="text-end text-muted small">16:07</td>
-            </tr>
-            
-            <tr>
-                <td><i class="fas fa-location-dot text-primary me-2"></i><strong>VIII Agosto</strong></td>
-                <td class="text-center"><span class="badge bg-success" style="font-size: 0.9rem;">220</span></td>
-                <td class="text-end text-muted small">16:07</td>
-            </tr>
-            
-            <tr>
-                <td><i class="fas fa-location-dot text-primary me-2"></i><strong>Autostazione</strong></td>
-                <td class="text-center"><span class="badge bg-success" style="font-size: 0.9rem;">179</span></td>
-                <td class="text-end text-muted small">16:07</td>
-            </tr>
-            
-                                </tbody>
-                            </table>
-                        </div>
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Parking IT">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-                        <div class="mt-5 p-4 text-center border-top">
-                            <h5 class="mb-3">Analisi Avanzata & Grafici</h5>
-                            <p class="text-muted mb-4">Accedi alla piattaforma Streamlit per visualizzare gli slider temporali e l'andamento storico dei dati.</p>
-                            <a href="https://parcheggi-automazione.streamlit.app/" target="_blank" class="btn-streamlit">
-                                <i class="fas fa-chart-line me-2"></i>VAI ALL'APP INTERATTIVA
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <footer class="text-center mt-5 footer-text">
-                Progetto di Automazione Real-Time &copy; 2026 | PeruLabTech Solutions
-            </footer>
+  <!-- Theme -->
+  <meta name="theme-color" content="#ff8c00">
+  <meta name="msapplication-TileColor" content="#0a0a0f">
+
+  <!-- SEO / Open Graph -->
+  <meta name="description" content="Monitoraggio parcheggi in tempo reale — Bologna, Torino, Firenze">
+  <meta property="og:title" content="Parking Monitor Italia">
+  <meta property="og:description" content="Disponibilità parcheggi in tempo reale nelle principali città italiane">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fperuzzu.github.io/parcheggi-automazione/">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: #0a0a0f;
+      overflow: hidden;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Splash screen mostrato mentre l'iframe carica */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 100;
+      transition: opacity 0.4s ease;
+    }
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash-icon {
+      width: 72px; height: 72px;
+      background: #ff8c0015;
+      border: 1px solid #ff8c0040;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .splash-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #e8e6e0;
+      letter-spacing: 0.1em;
+    }
+    .splash-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: #444;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid #1e1e2e;
+      border-top-color: #ff8c00;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Iframe a tutto schermo */
+    #app-frame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0a0a0f;
+    }
+
+    /* Banner "installa app" — mostrato solo su mobile se non già installata */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0f0f18;
+      border-top: 1px solid #1e1e2e;
+      padding: 12px 16px;
+      z-index: 200;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    #install-banner.visible { display: flex; }
+    .banner-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #aaa;
+      line-height: 1.5;
+    }
+    .banner-text b { color: #e8e6e0; }
+    .btn-install {
+      flex-shrink: 0;
+      background: #ff8c00;
+      color: #0a0a0f;
+      border: none;
+      border-radius: 3px;
+      padding: 8px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .btn-dismiss {
+      background: transparent;
+      border: none;
+      color: #444;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Splash screen -->
+  <div id="splash">
+    <div class="splash-icon">🅿</div>
+    <div class="splash-title">Parking Monitor Italia</div>
+    <div class="splash-sub">Bologna · Torino · Firenze</div>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- App Streamlit in iframe -->
+  <iframe
+    id="app-frame"
+    src="https://parcheggi-automazione.streamlit.app/?embed=true"
+    allow="geolocation"
+    loading="eager"
+    title="Parking Monitor Italia"
+  ></iframe>
+
+  <!-- Banner installa PWA (Android/Chrome) -->
+  <div id="install-banner">
+    <div class="banner-text">
+      <b>Installa l'app</b><br>
+      Aggiungi alla schermata home per accesso rapido
+    </div>
+    <button class="btn-install" id="btn-install">Installa</button>
+    <button class="btn-dismiss" id="btn-dismiss">✕</button>
+  </div>
+
+  <script>
+    // ── Nascondi splash quando iframe è pronto ──
+    const frame  = document.getElementById("app-frame");
+    const splash = document.getElementById("splash");
+
+    // Timeout di sicurezza: dopo 6s nascondi comunque lo splash
+    const fallback = setTimeout(() => splash.classList.add("hidden"), 6000);
+
+    frame.addEventListener("load", () => {
+      clearTimeout(fallback);
+      setTimeout(() => splash.classList.add("hidden"), 600);
+    });
+
+    // ── Service Worker ──
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/parcheggi-automazione/sw.js")
+          .then(reg => console.log("SW registrato:", reg.scope))
+          .catch(err => console.warn("SW fallito:", err));
+      });
+    }
+
+    // ── Banner installa (A2HS — solo Chrome/Android) ──
+    let deferredPrompt = null;
+    const banner     = document.getElementById("install-banner");
+    const btnInstall = document.getElementById("btn-install");
+    const btnDismiss = document.getElementById("btn-dismiss");
+
+    // Non mostrare se già installata o già rifiutata
+    const dismissed = localStorage.getItem("pwa-dismissed");
+
+    window.addEventListener("beforeinstallprompt", e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!dismissed) banner.classList.add("visible");
+    });
+
+    btnInstall.addEventListener("click", async () => {
+      banner.classList.remove("visible");
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log("PWA install:", outcome);
+        deferredPrompt = null;
+      }
+    });
+
+    btnDismiss.addEventListener("click", () => {
+      banner.classList.remove("visible");
+      localStorage.setItem("pwa-dismissed", "1");
+    });
+
+    // Su iOS mostra istruzione manuale (niente beforeinstallprompt)
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    if (isIOS && !isStandalone && !dismissed) {
+      banner.innerHTML = `
+        <div class="banner-text">
+          <b>Installa su iPhone</b><br>
+          Tocca <b>Condividi</b> → <b>Aggiungi a schermata Home</b>
         </div>
-    </body>
-    </html>
-    
+        <button class="btn-dismiss" id="btn-dismiss-ios">✕</button>
+      `;
+      banner.classList.add("visible");
+      document.getElementById("btn-dismiss-ios").addEventListener("click", () => {
+        banner.classList.remove("visible");
+        localStorage.setItem("pwa-dismissed", "1");
+      });
+    }
+  </script>
+
+</body>
+</html>
