@@ -925,6 +925,7 @@ CITY_META = {
 }
 
 c1, c2, c3 = st.columns(3)
+_city_changed = False
 for col, city in zip([c1, c2, c3], ["Bologna", "Torino", "Firenze"]):
     with col:
         active = st.session_state.citta_sel == city
@@ -934,7 +935,12 @@ for col, city in zip([c1, c2, c3], ["Bologna", "Torino", "Firenze"]):
             use_container_width=True,
             type="primary" if active else "secondary",
         ):
-            st.session_state.citta_sel = city
+            if st.session_state.citta_sel != city:
+                st.session_state.citta_sel = city
+                _city_changed = True
+
+if _city_changed:
+    st.rerun()
 
 citta_sel = st.session_state.citta_sel
 st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.6rem 0 1rem 0'></div>",
