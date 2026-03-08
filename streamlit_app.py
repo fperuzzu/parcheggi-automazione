@@ -1226,58 +1226,50 @@ if live_disponibile:
         occ_s = int(row_s["occ_pct"])
         em    = status_emoji(occ_s)
         url   = maps_url(row_s)
-        waze  = f"https://waze.com/ul?ll={row_s['lat']},{row_s['lon']}&navigate=yes"
+        waze  = "https://waze.com/ul?ll=" + str(row_s["lat"]) + "," + str(row_s["lon"]) + "&navigate=yes"
         rank  = ["1️⃣","2️⃣","3️⃣"][i]
-        sugg_cards += f"""
-        <div style="background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px;
-                    padding:1rem 1.2rem;display:flex;align-items:center;
-                    justify-content:space-between;gap:1rem;flex-wrap:wrap">
-            <div>
-                <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
-                            color:#555;text-transform:uppercase;letter-spacing:0.1em;
-                            margin-bottom:4px">{rank} {label}</div>
-                <div style="font-family:'DM Sans',sans-serif;font-size:1rem;
-                            font-weight:600;color:#e8e6e0">{em} {row_s['nome']}</div>
-                <div style="font-family:'DM Mono',monospace;font-size:0.72rem;
-                            color:#666;margin-top:2px">
-                    {int(row_s['liberi'])} liberi · {occ_s}% occupato
-                </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-shrink:0">
-                <a href="{url}" target="_blank"
-                   style="padding:8px 16px;background:#ff8c00;color:#0a0a0f;
-                          border-radius:4px;text-decoration:none;
-                          font-family:'DM Mono',monospace;font-size:0.72rem;
-                          font-weight:700;white-space:nowrap">
-                    🗺 Naviga
-                </a>
-                <a href="{waze}" target="_blank"
-                   style="padding:8px 12px;background:#0f0f18;color:#08b3ff;
-                          border:1px solid #08b3ff44;border-radius:4px;
-                          text-decoration:none;font-family:'DM Mono',monospace;
-                          font-size:0.72rem;white-space:nowrap">
-                    Waze
-                </a>
-            </div>
-        </div>"""
+        nome  = str(row_s["nome"])
+        lib   = str(int(row_s["liberi"]))
+        sugg_cards += (
+            '<div style="background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px;'
+            'padding:1rem 1.2rem;display:flex;align-items:center;'
+            'justify-content:space-between;gap:1rem;flex-wrap:wrap">'
+            '<div>'
+            '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
+            'color:#555;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">'
+            + rank + " " + label + "</div>"
+            '<div style="font-family:DM Sans,sans-serif;font-size:1rem;'
+            'font-weight:600;color:#e8e6e0">' + em + " " + nome + "</div>"
+            '<div style="font-family:DM Mono,monospace;font-size:0.72rem;'
+            'color:#666;margin-top:2px">'
+            + lib + " liberi · " + str(occ_s) + "% occupato</div>"
+            "</div>"
+            '<div style="display:flex;gap:8px;flex-shrink:0">'
+            '<a href="' + url + '" target="_blank" '
+            'style="padding:8px 16px;background:#ff8c00;color:#0a0a0f;'
+            'border-radius:4px;text-decoration:none;font-family:DM Mono,monospace;'
+            'font-size:0.72rem;font-weight:700;white-space:nowrap">🗺 Naviga</a>'
+            '<a href="' + waze + '" target="_blank" '
+            'style="padding:8px 12px;background:#0f0f18;color:#08b3ff;'
+            'border:1px solid #08b3ff44;border-radius:4px;text-decoration:none;'
+            'font-family:DM Mono,monospace;font-size:0.72rem;white-space:nowrap">Waze</a>'
+            "</div></div>"
+        )
 
-    st.markdown(f"""
-    <div style="background:#080810;border:1px solid #ff8c0033;border-radius:10px;
-                padding:1.2rem 1.4rem;margin-bottom:1.2rem">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
-                    color:#ff8c00;letter-spacing:0.04em;margin-bottom:0.2rem">
-            🚗 Trova Parcheggio Ora — {citta_sel}
-        </div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
-                    color:#555;margin-bottom:1rem">
-            Suggerimenti basati sulla disponibilità in tempo reale
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-            {sugg_cards}
-        </div>
-        {prob_html}
-    </div>
-    """, unsafe_allow_html=True)
+    trova_html = (
+        '<div style="background:#080810;border:1px solid #ff8c0033;border-radius:10px;'
+        'padding:1.2rem 1.4rem;margin-bottom:1.2rem">'
+        '<div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;'
+        'color:#ff8c00;letter-spacing:0.04em;margin-bottom:0.2rem">'
+        "🚗 Trova Parcheggio Ora — " + citta_sel + "</div>"
+        '<div style="font-family:DM Mono,monospace;font-size:0.65rem;'
+        'color:#555;margin-bottom:1rem">Suggerimenti basati sulla disponibilità in tempo reale</div>'
+        '<div style="display:flex;flex-direction:column;gap:10px">'
+        + sugg_cards + "</div>"
+        + prob_html +
+        "</div>"
+    )
+    st.markdown(trova_html, unsafe_allow_html=True)
     st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.5rem 0 1rem 0'></div>",
                 unsafe_allow_html=True)
 
