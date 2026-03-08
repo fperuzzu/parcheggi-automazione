@@ -1609,79 +1609,70 @@ SEO_CONTENT = {
 }
 
 if "citta_sel" in st.session_state:
-    _seo = SEO_CONTENT.get(st.session_state.citta_sel, SEO_CONTENT["Bologna"])
+    _seo  = SEO_CONTENT.get(st.session_state.citta_sel, SEO_CONTENT["Bologna"])
     _city = st.session_state.citta_sel
 
-    # Schema.org JSON-LD per Google
+    # ── Schema.org JSON-LD ──
     _schema_parkings = ", ".join(
-        f'{{"@type":"Place","name":"{p[0]}","geo":{{"@type":"GeoCoordinates","latitude":"{p[1].split(",")[0]}","longitude":"{p[1].split(",")[1]}"}}}}'
+        '{"@type":"Place","name":"' + p[0] + '","geo":{"@type":"GeoCoordinates",'
+        '"latitude":"' + p[1].split(",")[0] + '","longitude":"' + p[1].split(",")[1] + '"}}'
         for p in _seo["parcheggi"]
     )
     _faq_schema = ", ".join(
-        f'{{"@type":"Question","name":"{q}","acceptedAnswer":{{"@type":"Answer","text":"{a}"}}}}'
+        '{"@type":"Question","name":"' + q.replace('"', '') + '",'
+        '"acceptedAnswer":{"@type":"Answer","text":"' + a.replace('"', '') + '"}}'
         for q, a in _seo["faq"]
     )
+    _schema_html = (
+        '<script type="application/ld+json">'
+        '{"@context":"https://schema.org","@graph":['
+        '{"@type":"WebSite","name":"ParkPulse","url":"https://parkpulse.it"},'
+        '{"@type":"FAQPage","mainEntity":[' + _faq_schema + ']},'
+        '{"@type":"ItemList","name":"Parcheggi ' + _city + '","itemListElement":[' + _schema_parkings + ']}'
+        ']}</script>'
+    )
 
-    st.markdown(f"""
-    <script type="application/ld+json">
-    {{
-      "@context": "https://schema.org",
-      "@graph": [
-        {{
-          "@type": "WebSite",
-          "name": "ParkPulse",
-          "url": "https://parkpulse.it",
-          "description": "Monitoraggio parcheggi in tempo reale per Bologna, Torino e Firenze."
-        }},
-        {{
-          "@type": "FAQPage",
-          "mainEntity": [{_faq_schema}]
-        }},
-        {{
-          "@type": "ItemList",
-          "name": "Parcheggi {_city}",
-          "itemListElement": [{_schema_parkings}]
-        }}
-      ]
-    }}
-    </script>
+    # ── Card parcheggi ──
+    _park_cards = ""
+    for p in _seo["parcheggi"]:
+        _park_cards += (
+            '<div style="background:#0a0a0f;border:1px solid #1a1a24;'
+            'border-radius:6px;padding:0.8rem 1rem">'
+            '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#ff8c00;'
+            'font-weight:600;margin-bottom:4px">🅿 ' + p[0] + '</div>'
+            '<div style="font-family:DM Sans,sans-serif;font-size:0.75rem;color:#444;'
+            'line-height:1.6">' + p[2] + '</div>'
+            '</div>'
+        )
 
-    <div style="margin-top:2rem;padding:1.5rem 0;border-top:1px solid #1a1a24">
-        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#333;
-                    text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.8rem">
-            ℹ Informazioni — Parcheggi {_city}
-        </div>
-        <p style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#444;
-                  line-height:1.7;margin-bottom:1rem">
-            {_seo["intro"]}
-        </p>
+    # ── FAQ ──
+    _faq_html = ""
+    for q, a in _seo["faq"]:
+        _faq_html += (
+            '<div style="border-bottom:1px solid #111118;padding:0.6rem 0">'
+            '<div style="font-family:DM Sans,sans-serif;font-size:0.78rem;'
+            'font-weight:600;color:#555;margin-bottom:2px">' + q + '</div>'
+            '<div style="font-family:DM Sans,sans-serif;font-size:0.75rem;'
+            'color:#3a3a3a;line-height:1.6">' + a + '</div>'
+            '</div>'
+        )
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-                    gap:0.8rem;margin-bottom:1.2rem">
-            {"".join(f'''
-            <div style="background:#0a0a0f;border:1px solid #1a1a24;border-radius:6px;padding:0.8rem 1rem">
-                <div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#ff8c00;
-                            font-weight:600;margin-bottom:4px">🅿 {p[0]}</div>
-                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#444;
-                            line-height:1.6">{p[2]}</div>
-            </div>''' for p in _seo["parcheggi"])}
-        </div>
-
-        <div style="margin-top:1rem">
-            {"".join(f'''
-            <div style="border-bottom:1px solid #111118;padding:0.6rem 0">
-                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;
-                            font-weight:600;color:#555;margin-bottom:2px">{q}</div>
-                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;
-                            color:#3a3a3a;line-height:1.6">{a}</div>
-            </div>''' for q, a in _seo["faq"])}
-        </div>
-
-        <div style="margin-top:1rem;font-family:\'DM Mono\',monospace;font-size:0.58rem;color:#222">
-            {_seo["keywords"]}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    _seo_block = (
+        _schema_html +
+        '<div style="margin-top:2rem;padding:1.5rem 0;border-top:1px solid #1a1a24">'
+        '<div style="font-family:DM Mono,monospace;font-size:0.62rem;color:#333;'
+        'text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.8rem">'
+        'ℹ Informazioni — Parcheggi ' + _city + '</div>'
+        '<p style="font-family:DM Sans,sans-serif;font-size:0.82rem;color:#444;'
+        'line-height:1.7;margin-bottom:1rem">' + _seo["intro"] + '</p>'
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));'
+        'gap:0.8rem;margin-bottom:1.2rem">' + _park_cards + '</div>'
+        '<div style="margin-top:1rem">' + _faq_html + '</div>'
+        '<div style="margin-top:1rem;font-family:DM Mono,monospace;font-size:0.58rem;color:#222">'
+        + _seo["keywords"] + '</div>'
+        '</div>'
+    )
+    st.markdown(_seo_block, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # FOOTER
