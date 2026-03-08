@@ -23,7 +23,7 @@
   <meta property="og:title" content="ParkPulse">
   <meta property="og:description" content="Disponibilità parcheggi in tempo reale nelle principali città italiane">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://fperuzzu.github.io/parcheggi-automazione/">
+  <meta property="og:url" content="https://parkpulse.it/">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -185,7 +185,7 @@
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
-          .register("/parcheggi-automazione/sw.js")
+          .register("/sw.js")
           .then(reg => console.log("SW registrato:", reg.scope))
           .catch(err => console.warn("SW fallito:", err));
       });
