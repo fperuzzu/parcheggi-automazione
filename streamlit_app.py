@@ -561,9 +561,9 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
         RED    = colors.HexColor("#cc2200")
 
         title_style = ParagraphStyle("title", fontSize=22, textColor=ORANGE,
-                                     spaceAfter=2, fontName="Helvetica-Bold")
-        sub_style   = ParagraphStyle("sub",   fontSize=9,  textColor=MUTED,
-                                     spaceAfter=12, fontName="Helvetica")
+                                     spaceAfter=8, fontName="Helvetica-Bold")
+        sub_style   = ParagraphStyle("sub",   fontSize=10, textColor=MUTED,
+                                     spaceBefore=4, spaceAfter=14, fontName="Helvetica")
         h2_style    = ParagraphStyle("h2",    fontSize=12, textColor=LIGHT,
                                      spaceBefore=14, spaceAfter=6,
                                      fontName="Helvetica-Bold")
