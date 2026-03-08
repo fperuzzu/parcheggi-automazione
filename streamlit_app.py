@@ -844,7 +844,7 @@ with st.sidebar:
             ParkPulse è gratuito e open data.<br>
             Se lo trovi utile, offrimi un caffè ☕
         </div>
-        <a href="https://www.paypal.com/paypalme/fperuzzu/3"
+        <a href="https://www.paypal.me/fperuzzu/3"
            target="_blank"
            style="display:block;text-align:center;padding:9px;
                   background:linear-gradient(135deg,#ff8c00,#e67e00);
@@ -1272,16 +1272,23 @@ with col_pdf2:
                 datetime.now().strftime("%d/%m/%Y")
             )
         if pdf_bytes:
-            fname_pdf = f"parkpulse_{pdf_citta.lower()}_{datetime.now().strftime('%Y%m%d')}.pdf"
-            st.download_button(
-                label=f"⬇ Download PDF — {pdf_citta}",
-                data=pdf_bytes,
-                file_name=fname_pdf,
-                mime="application/pdf",
-                use_container_width=True,
-            )
+            st.session_state["pdf_bytes"] = pdf_bytes
+            st.session_state["pdf_citta"] = pdf_citta
         else:
-            st.warning("Installa reportlab per generare PDF: pip install reportlab")
+            st.warning("Installa reportlab: pip install reportlab")
+
+# Download PDF — separato dal bottone genera per evitare sovrapposizioni
+if st.session_state.get("pdf_bytes"):
+    fname_pdf = (f"parkpulse_{st.session_state['pdf_citta'].lower()}"
+                 f"_{datetime.now().strftime('%Y%m%d')}.pdf")
+    with col_pdf2:
+        st.download_button(
+            label=f"⬇ Download PDF — {st.session_state['pdf_citta']}",
+            data=st.session_state["pdf_bytes"],
+            file_name=fname_pdf,
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
 st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
             unsafe_allow_html=True)
@@ -1291,22 +1298,25 @@ st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
 # ─────────────────────────────────────────────
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("""
-<div style="display:flex;justify-content:space-between;align-items:center;
-            font-family:'DM Mono',monospace;font-size:0.65rem;color:#333;padding-bottom:1rem">
-    <span>© PeruLabTech — ParkPulse</span>
-    <span style="display:flex;align-items:center;gap:16px">
-        <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">Bologna</a>
-        &nbsp;·&nbsp;
-        <a href="https://opendata.5t.torino.it" style="color:#555;text-decoration:none">Torino</a>
-        &nbsp;·&nbsp;
-        <a href="https://opendata.comune.fi.it" style="color:#555;text-decoration:none">Firenze</a>
-        &nbsp;·&nbsp;
-        <a href="https://www.paypal.com/paypalme/fperuzzu/3" target="_blank"
-           style="color:#ff8c00;text-decoration:none;font-weight:600;
-                  background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.25);
-                  padding:3px 10px;border-radius:3px;">
+<div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#333;padding-bottom:1rem">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;
+                align-items:center;gap:8px;margin-bottom:8px">
+        <span>© PeruLabTech — ParkPulse</span>
+        <span>
+            <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">Bologna</a>
+            &nbsp;·&nbsp;
+            <a href="https://opendata.5t.torino.it" style="color:#555;text-decoration:none">Torino</a>
+            &nbsp;·&nbsp;
+            <a href="https://opendata.comune.fi.it" style="color:#555;text-decoration:none">Firenze</a>
+        </span>
+    </div>
+    <div style="text-align:center;margin-top:4px">
+        <a href="https://www.paypal.me/fperuzzu/3" target="_blank"
+           style="display:inline-block;color:#ff8c00;text-decoration:none;font-weight:600;
+                  background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.3);
+                  padding:6px 20px;border-radius:3px;letter-spacing:0.06em;font-size:0.72rem;">
             ☕ Offrimi un caffè
         </a>
-    </span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
