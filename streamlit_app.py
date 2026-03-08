@@ -844,7 +844,7 @@ with st.sidebar:
             ParkPulse è gratuito e open data.<br>
             Se lo trovi utile, offrimi un caffè ☕
         </div>
-        <a href="https://www.paypal.com/donate/?hosted_button_id=SOSTITUISCI_CON_IL_TUO_ID"
+        <a href="https://www.paypal.com/paypalme/fperuzzu/3"
            target="_blank"
            style="display:block;text-align:center;padding:9px;
                   background:linear-gradient(135deg,#ff8c00,#e67e00);
