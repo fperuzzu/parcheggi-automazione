@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 from streamlit_folium import folium_static
 from datetime import datetime
 import time
+import io
 
 # ─────────────────────────────────────────────
 # CONFIG
@@ -534,6 +535,172 @@ def fetch_firenze() -> pd.DataFrame:
         columns=["nome","liberi","occupati","totali","lat","lon"])
 
 
+def genera_pdf_report(citta: str, df_live: pd.DataFrame,
+                      df_storico: pd.DataFrame, data_str: str) -> bytes:
+    """Genera report PDF con snapshot live + trend storico."""
+    buf = io.BytesIO()
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable)
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=2*cm, rightMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+
+        styles = getSampleStyleSheet()
+        BG     = colors.HexColor("#0a0a0f")
+        ORANGE = colors.HexColor("#ff8c00")
+        LIGHT  = colors.HexColor("#e8e6e0")
+        MUTED  = colors.HexColor("#666666")
+        GREEN  = colors.HexColor("#00c864")
+        RED    = colors.HexColor("#ff3c3c")
+
+        title_style = ParagraphStyle("title", fontSize=22, textColor=ORANGE,
+                                     spaceAfter=2, fontName="Helvetica-Bold")
+        sub_style   = ParagraphStyle("sub",   fontSize=9,  textColor=MUTED,
+                                     spaceAfter=12, fontName="Helvetica")
+        h2_style    = ParagraphStyle("h2",    fontSize=12, textColor=LIGHT,
+                                     spaceBefore=14, spaceAfter=6,
+                                     fontName="Helvetica-Bold")
+        cell_style  = ParagraphStyle("cell",  fontSize=9,  textColor=LIGHT,
+                                     fontName="Helvetica")
+
+        story = []
+
+        # Header
+        story.append(Paragraph("ParkPulse", title_style))
+        story.append(Paragraph(
+            f"Parking Report — {citta} · {data_str}", sub_style))
+        story.append(HRFlowable(width="100%", thickness=0.5,
+                                color=colors.HexColor("#1e1e2e")))
+        story.append(Spacer(1, 0.4*cm))
+
+        # Snapshot live
+        if not df_live.empty:
+            story.append(Paragraph("Snapshot Live", h2_style))
+            tot_lib = int(df_live["liberi"].sum())
+            tot_tot = int(df_live["totali"].sum())
+            pct     = int((1 - tot_lib/tot_tot)*100) if tot_tot else 0
+
+            summary_data = [
+                ["Posti liberi", "Capacità totale", "Occupazione media"],
+                [str(tot_lib), str(tot_tot), f"{pct}%"],
+            ]
+            t = Table(summary_data, colWidths=[5.5*cm, 5.5*cm, 5.5*cm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND",  (0,0), (-1,0), colors.HexColor("#111118")),
+                ("BACKGROUND",  (0,1), (-1,1), colors.HexColor("#0f0f18")),
+                ("TEXTCOLOR",   (0,0), (-1,0), MUTED),
+                ("TEXTCOLOR",   (0,1), (-1,1), ORANGE),
+                ("FONTNAME",    (0,0), (-1,-1), "Helvetica"),
+                ("FONTSIZE",    (0,0), (-1,0), 7),
+                ("FONTSIZE",    (0,1), (-1,1), 16),
+                ("ALIGN",       (0,0), (-1,-1), "CENTER"),
+                ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0,0), (-1,-1),
+                 [colors.HexColor("#111118"), colors.HexColor("#0f0f18")]),
+                ("BOX",         (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
+                ("INNERGRID",   (0,0), (-1,-1), 0.3, colors.HexColor("#1e1e2e")),
+                ("TOPPADDING",  (0,0), (-1,-1), 8),
+                ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+            ]))
+            story.append(t)
+            story.append(Spacer(1, 0.5*cm))
+
+            # Tabella dettaglio parcheggi
+            story.append(Paragraph("Dettaglio parcheggi", h2_style))
+            rows_pdf = [["Parcheggio", "Liberi", "Totali", "Occupazione"]]
+            for _, r in df_live.iterrows():
+                occ = int(r["occupati"]/r["totali"]*100) if r["totali"] > 0 else 0
+                col = GREEN if occ < 60 else ORANGE if occ < 85 else RED
+                rows_pdf.append([
+                    r["nome"], str(int(r["liberi"])),
+                    str(int(r["totali"])), f"{occ}%"
+                ])
+            t2 = Table(rows_pdf, colWidths=[8*cm, 3*cm, 3*cm, 3*cm])
+            row_colors = [colors.HexColor("#111118")]
+            for _, r in df_live.iterrows():
+                occ = int(r["occupati"]/r["totali"]*100) if r["totali"] > 0 else 0
+                row_colors.append(colors.HexColor("#0f0f18"))
+            t2.setStyle(TableStyle([
+                ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#1a1a2e")),
+                ("TEXTCOLOR",    (0,0), (-1,0), MUTED),
+                ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
+                ("FONTSIZE",     (0,0), (-1,-1), 9),
+                ("TEXTCOLOR",    (0,1), (-1,-1), LIGHT),
+                ("ALIGN",        (1,0), (-1,-1), "CENTER"),
+                ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                 [colors.HexColor("#0f0f18"), colors.HexColor("#0c0c14")]),
+                ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
+                ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#1a1a24")),
+                ("TOPPADDING",   (0,0), (-1,-1), 6),
+                ("BOTTOMPADDING",(0,0), (-1,-1), 6),
+            ]))
+            story.append(t2)
+
+        # Storico
+        if not df_storico.empty:
+            story.append(Spacer(1, 0.6*cm))
+            story.append(Paragraph(f"Dati storici — {data_str}", h2_style))
+            df_s = df_storico.copy()
+            df_s["liberi"] = pd.to_numeric(df_s["liberi"], errors="coerce")
+            df_s["totali"] = pd.to_numeric(df_s["totali"], errors="coerce")
+            df_s = df_s.dropna(subset=["liberi","totali"])
+            if not df_s.empty:
+                sommario = df_s.groupby("nome").agg(
+                    media_liberi=("liberi","mean"),
+                    min_liberi=("liberi","min"),
+                    max_liberi=("liberi","max"),
+                    rilevazioni=("liberi","count"),
+                ).reset_index()
+                rows_s = [["Parcheggio","Media liberi","Min","Max","Rilevazioni"]]
+                for _, r in sommario.iterrows():
+                    rows_s.append([
+                        r["nome"],
+                        f"{r['media_liberi']:.0f}",
+                        f"{r['min_liberi']:.0f}",
+                        f"{r['max_liberi']:.0f}",
+                        str(int(r["rilevazioni"])),
+                    ])
+                t3 = Table(rows_s, colWidths=[7*cm,3*cm,2.5*cm,2.5*cm,2.5*cm])
+                t3.setStyle(TableStyle([
+                    ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#1a1a2e")),
+                    ("TEXTCOLOR",    (0,0), (-1,0), MUTED),
+                    ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
+                    ("FONTSIZE",     (0,0), (-1,-1), 9),
+                    ("TEXTCOLOR",    (0,1), (-1,-1), LIGHT),
+                    ("ALIGN",        (1,0), (-1,-1), "CENTER"),
+                    ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                     [colors.HexColor("#0f0f18"), colors.HexColor("#0c0c14")]),
+                    ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
+                    ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#1a1a24")),
+                    ("TOPPADDING",   (0,0), (-1,-1), 6),
+                    ("BOTTOMPADDING",(0,0), (-1,-1), 6),
+                ]))
+                story.append(t3)
+
+        # Footer
+        story.append(Spacer(1, 1*cm))
+        story.append(HRFlowable(width="100%", thickness=0.5,
+                                color=colors.HexColor("#1e1e2e")))
+        story.append(Paragraph(
+            f"ParkPulse — parkpulse.it · Generato il {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            ParagraphStyle("footer", fontSize=7, textColor=MUTED,
+                           fontName="Helvetica", spaceBefore=6)
+        ))
+
+        doc.build(story)
+        return buf.getvalue()
+
+    except ImportError:
+        return b""
+
+
 FETCH_MAP = {
     "Bologna": fetch_bologna,
     "Torino":  fetch_torino,
@@ -541,8 +708,58 @@ FETCH_MAP = {
 }
 
 
+def scarica_dataset_csv(citta: str, giorni: int = 7) -> bytes:
+    """Scarica lo storico degli ultimi N giorni da Turso e restituisce CSV."""
+    if not _TURSO_URL or not _TURSO_TOKEN:
+        return b""
+    try:
+        base = _TURSO_URL.replace("libsql://", "https://")
+        from datetime import timedelta
+        data_inizio = (datetime.now() - timedelta(days=giorni)).strftime("%Y-%m-%d")
+        sql = """
+            SELECT citta, nome, liberi, totali, timestamp
+            FROM storico
+            WHERE citta = ? AND timestamp >= ?
+            ORDER BY timestamp DESC
+        """
+        payload = {
+            "requests": [
+                {"type": "execute", "stmt": {
+                    "sql": sql,
+                    "args": [
+                        {"type": "text", "value": citta},
+                        {"type": "text", "value": data_inizio},
+                    ]
+                }},
+                {"type": "close"}
+            ]
+        }
+        r = requests.post(
+            f"{base}/v2/pipeline",
+            json=payload,
+            headers={"Authorization": f"Bearer {_TURSO_TOKEN}",
+                     "Content-Type": "application/json"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        result = r.json()
+        rows_data = result["results"][0]["response"]["result"]
+        cols = [c["name"] for c in rows_data["cols"]]
+        rows = [[v["value"] for v in row] for row in rows_data["rows"]]
+        df = pd.DataFrame(rows, columns=cols)
+        # Aggiungi colonna occupazione %
+        df["liberi"]  = pd.to_numeric(df["liberi"],  errors="coerce")
+        df["totali"]  = pd.to_numeric(df["totali"],  errors="coerce")
+        df["occupazione_pct"] = (
+            (1 - df["liberi"] / df["totali"]) * 100
+        ).round(1)
+        return df.to_csv(index=False).encode("utf-8")
+    except Exception:
+        return b""
+
+
 # ─────────────────────────────────────────────
-# SIDEBAR — CTA + info
+# SIDEBAR — CTA + download + caffè
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
@@ -557,21 +774,92 @@ with st.sidebar:
     <hr style="border-color:#1a1a24;margin-bottom:1rem">
     """, unsafe_allow_html=True)
 
+    # ── Download CSV ──
     st.markdown("""
     <div class="cta-block">
-        <div class="cta-title">📊 Data</div>
-        <a class="cta-btn primary" href="mailto:info@perulabtech.com?subject=ParkPulse Dataset">
-            Download Dataset
-        </a>
-        <a class="cta-btn" href="mailto:info@perulabtech.com?subject=ParkPulse API Access">
-            🔌 API Access
-        </a>
-    </div>
-    <div class="cta-block">
-        <div class="cta-title">📡 Copertura</div>
+        <div class="cta-title">📥 Dataset</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
+                    color:#555;margin-bottom:8px;line-height:1.6">
+            Storico completo · CSV · libero<br>
+            Aggiornato ogni 30 min da GitHub Actions
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
+    # Selezione città e periodo per il download
+    dl_citta = st.selectbox(
+        "Città", ["Bologna", "Torino", "Firenze"],
+        key="dl_citta", label_visibility="collapsed"
+    )
+    dl_giorni = st.select_slider(
+        "Periodo", options=[1, 3, 7, 14, 30],
+        value=7, key="dl_giorni",
+        format_func=lambda x: f"Ultimi {x} giorni"
+    )
+
+    if st.button("⬇ Scarica CSV", use_container_width=True, type="primary"):
+        with st.spinner("Preparazione dataset..."):
+            csv_bytes = scarica_dataset_csv(dl_citta, dl_giorni)
+        if csv_bytes:
+            fname = f"parkpulse_{dl_citta.lower()}_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.download_button(
+                label=f"💾 Download {dl_citta} ({dl_giorni}gg)",
+                data=csv_bytes,
+                file_name=fname,
+                mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            st.warning("Nessun dato disponibile per il periodo selezionato.")
+
+    st.markdown("<hr style='border-color:#1a1a24;margin:1rem 0'>", unsafe_allow_html=True)
+
+    # ── API Access ──
+    st.markdown("""
+    <div class="cta-block">
+        <div class="cta-title">🔌 API Access</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
+                    color:#555;margin-bottom:8px;line-height:1.6">
+            Integra i dati nella tua app.<br>
+            Contattaci per accesso e pricing.
+        </div>
+        <a class="cta-btn"
+           href="mailto:info@perulabtech.com?subject=ParkPulse API Access"
+           style="display:block;text-align:center;padding:7px;border:1px solid #2a2a3a;
+                  border-radius:3px;color:#aaa;font-family:'DM Mono',monospace;
+                  font-size:0.68rem;text-decoration:none;">
+            Richiedi accesso →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-color:#1a1a24;margin:1rem 0'>", unsafe_allow_html=True)
+
+    # ── Sostieni il progetto ──
+    st.markdown("""
+    <div class="cta-block" style="border-color:#2a1f00">
+        <div class="cta-title" style="color:#cc8800">☕ Sostieni il progetto</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
+                    color:#555;margin-bottom:10px;line-height:1.7">
+            ParkPulse è gratuito e open data.<br>
+            Se lo trovi utile, offrimi un caffè ☕
+        </div>
+        <a href="https://www.paypal.com/donate/?hosted_button_id=SOSTITUISCI_CON_IL_TUO_ID"
+           target="_blank"
+           style="display:block;text-align:center;padding:9px;
+                  background:linear-gradient(135deg,#ff8c00,#e67e00);
+                  border-radius:3px;color:#0a0a0f;
+                  font-family:'DM Mono',monospace;font-size:0.72rem;
+                  font-weight:700;letter-spacing:0.08em;text-decoration:none;">
+            ☕ Offrimi un caffè (3€)
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-color:#1a1a24;margin:1rem 0'>", unsafe_allow_html=True)
+
+    # ── Copertura ──
+    st.markdown('<div class="cta-title">📡 Copertura</div>', unsafe_allow_html=True)
     CITTA_INFO = {
         "Bologna":  {"emoji": "🅱", "n": 3},
         "Torino":   {"emoji": "🔺", "n": 36},
@@ -588,12 +876,12 @@ with st.sidebar:
         """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="margin-top:1.5rem;font-family:'DM Mono',monospace;
-                font-size:0.58rem;color:#333;line-height:1.8">
+    <div style="margin-top:1.2rem;font-family:'DM Mono',monospace;
+                font-size:0.58rem;color:#2a2a3a;line-height:1.8">
         Dati aggiornati ogni 30 min<br>
         Fonti: Comune di Bologna,<br>
         5T Torino, Firenze Parcheggi<br><br>
-        © PeruLabTech
+        © PeruLabTech — ParkPulse
     </div>
     """, unsafe_allow_html=True)
 
@@ -794,47 +1082,51 @@ if live_disponibile:
 
 
 # ─────────────────────────────────────────────
-# MAPPA + BAR CHART — solo se live disponibile
+# MAPPA FULL-WIDTH — protagonista
 # ─────────────────────────────────────────────
 if live_disponibile:
-    col_graf, col_map = st.columns([2, 3])
+    st.markdown('<div class="section-label" style="margin-bottom:4px">Mappa live</div>',
+                unsafe_allow_html=True)
+    centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
+    m = folium.Map(location=centro, zoom_start=14, tiles="cartodbdark_matter")
+    for row in df_live.itertuples():
+        occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
+        aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
+    folium_static(m, width=1400, height=520)
+    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.8rem 0'></div>",
+                unsafe_allow_html=True)
 
-    with col_graf:
-        st.markdown('<div class="section-label">Occupazione attuale</div>', unsafe_allow_html=True)
-        df_bar = df_live.copy()
-        df_bar["pct"] = (df_bar["occupati"] / df_bar["totali"] * 100).astype(int)
-        df_bar = df_bar.sort_values("pct", ascending=True)
-        fig_bar = go.Figure(go.Bar(
-            x=list(df_bar["pct"]),
-            y=list(df_bar["nome"]),
-            orientation="h",
-            marker_color=[occ_color(p) for p in df_bar["pct"]],
-            marker_line_width=0,
-            text=[f"{p}%" for p in df_bar["pct"]],
-            textposition="outside",
-            textfont=dict(size=11, color="#888"),
-        ))
-        fig_bar.update_xaxes(range=[0, 115], showgrid=True, gridcolor="#1e1e2e",
-                             ticksuffix="%", zeroline=False, tickfont=dict(size=10, color="#666"))
-        fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=11, color="#bbb"))
-        fig_bar.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=max(320, len(df_bar) * 36),
-            margin=dict(l=10, r=50, t=10, b=10),
-            bargap=0.3, showlegend=False,
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    with col_map:
-        st.markdown('<div class="section-label">Mappa</div>', unsafe_allow_html=True)
-        centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
-        m = folium.Map(location=centro, zoom_start=13, tiles="cartodbdark_matter")
-        for row in df_live.itertuples():
-            occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
-            aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
-        folium_static(m, width=680, height=max(320, len(df_bar) * 36))
-
-    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
+# BAR CHART — sotto la mappa, full-width
+if live_disponibile:
+    st.markdown('<div class="section-label">Occupazione attuale</div>', unsafe_allow_html=True)
+    df_bar = df_live.copy()
+    df_bar["pct"] = (df_bar["occupati"] / df_bar["totali"] * 100).astype(int)
+    df_bar = df_bar.sort_values("pct", ascending=True)
+    df_bar["liberi_label"] = df_bar.apply(
+        lambda r: f"{r['nome']} — {r['liberi']} liberi", axis=1
+    )
+    fig_bar = go.Figure(go.Bar(
+        x=list(df_bar["pct"]),
+        y=list(df_bar["liberi_label"]),
+        orientation="h",
+        marker_color=[occ_color(p) for p in df_bar["pct"]],
+        marker_line_width=0,
+        text=[f"{p}%  ·  {r} liberi" for p, r in zip(df_bar["pct"], df_bar["liberi"])],
+        textposition="outside",
+        textfont=dict(size=11, color="#777"),
+        customdata=list(df_bar["liberi"]),
+    ))
+    fig_bar.update_xaxes(range=[0, 120], showgrid=True, gridcolor="#1a1a24",
+                         ticksuffix="%", zeroline=False, tickfont=dict(size=10, color="#555"))
+    fig_bar.update_yaxes(showgrid=False, tickfont=dict(size=11, color="#bbb"))
+    fig_bar.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        height=max(260, len(df_bar) * 38),
+        margin=dict(l=10, r=80, t=10, b=10),
+        bargap=0.35, showlegend=False,
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.8rem 0'></div>",
                 unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
@@ -914,6 +1206,41 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
+
+# ─────────────────────────────────────────────
+# REPORT PDF
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-label" style="margin-top:0.5rem">Report</div>',
+            unsafe_allow_html=True)
+
+col_pdf1, col_pdf2, col_pdf3 = st.columns([2, 2, 3])
+with col_pdf1:
+    pdf_citta = st.selectbox("Città report", ["Bologna","Torino","Firenze"],
+                             key="pdf_citta", label_visibility="collapsed",
+                             index=["Bologna","Torino","Firenze"].index(citta_sel))
+with col_pdf2:
+    if st.button("📄 Genera Report PDF", use_container_width=True):
+        with st.spinner("Generazione report..."):
+            df_rep_live    = FETCH_MAP[pdf_citta]()
+            df_rep_storico = query_storico(pdf_citta, str(datetime.now().date()))
+            pdf_bytes = genera_pdf_report(
+                pdf_citta, df_rep_live, df_rep_storico,
+                datetime.now().strftime("%d/%m/%Y")
+            )
+        if pdf_bytes:
+            fname_pdf = f"parkpulse_{pdf_citta.lower()}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            st.download_button(
+                label=f"⬇ Download PDF — {pdf_citta}",
+                data=pdf_bytes,
+                file_name=fname_pdf,
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        else:
+            st.warning("Installa reportlab per generare PDF: pip install reportlab")
+
+st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
+            unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # FOOTER
