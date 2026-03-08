@@ -553,12 +553,12 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
                                 topMargin=2*cm, bottomMargin=2*cm)
 
         styles = getSampleStyleSheet()
-        BG     = colors.HexColor("#0a0a0f")
-        ORANGE = colors.HexColor("#ff8c00")
-        LIGHT  = colors.HexColor("#e8e6e0")
-        MUTED  = colors.HexColor("#666666")
-        GREEN  = colors.HexColor("#00c864")
-        RED    = colors.HexColor("#ff3c3c")
+        BG     = colors.white
+        ORANGE = colors.HexColor("#e07000")
+        LIGHT  = colors.HexColor("#1a1a1a")
+        MUTED  = colors.HexColor("#888888")
+        GREEN  = colors.HexColor("#007a3d")
+        RED    = colors.HexColor("#cc2200")
 
         title_style = ParagraphStyle("title", fontSize=22, textColor=ORANGE,
                                      spaceAfter=2, fontName="Helvetica-Bold")
@@ -577,7 +577,7 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
         story.append(Paragraph(
             f"Parking Report — {citta} · {data_str}", sub_style))
         story.append(HRFlowable(width="100%", thickness=0.5,
-                                color=colors.HexColor("#1e1e2e")))
+                                color=colors.HexColor("#dddddd")))
         story.append(Spacer(1, 0.4*cm))
 
         # Snapshot live
@@ -593,8 +593,8 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
             ]
             t = Table(summary_data, colWidths=[5.5*cm, 5.5*cm, 5.5*cm])
             t.setStyle(TableStyle([
-                ("BACKGROUND",  (0,0), (-1,0), colors.HexColor("#111118")),
-                ("BACKGROUND",  (0,1), (-1,1), colors.HexColor("#0f0f18")),
+                ("BACKGROUND",  (0,0), (-1,0), colors.HexColor("#f5f5f5")),
+                ("BACKGROUND",  (0,1), (-1,1), colors.white),
                 ("TEXTCOLOR",   (0,0), (-1,0), MUTED),
                 ("TEXTCOLOR",   (0,1), (-1,1), ORANGE),
                 ("FONTNAME",    (0,0), (-1,-1), "Helvetica"),
@@ -603,9 +603,9 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
                 ("ALIGN",       (0,0), (-1,-1), "CENTER"),
                 ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
                 ("ROWBACKGROUNDS", (0,0), (-1,-1),
-                 [colors.HexColor("#111118"), colors.HexColor("#0f0f18")]),
-                ("BOX",         (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
-                ("INNERGRID",   (0,0), (-1,-1), 0.3, colors.HexColor("#1e1e2e")),
+                 [colors.HexColor("#f5f5f5"), colors.white]),
+                ("BOX",         (0,0), (-1,-1), 0.5, colors.HexColor("#dddddd")),
+                ("INNERGRID",   (0,0), (-1,-1), 0.3, colors.HexColor("#dddddd")),
                 ("TOPPADDING",  (0,0), (-1,-1), 8),
                 ("BOTTOMPADDING",(0,0),(-1,-1), 8),
             ]))
@@ -623,21 +623,21 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
                     str(int(r["totali"])), f"{occ}%"
                 ])
             t2 = Table(rows_pdf, colWidths=[8*cm, 3*cm, 3*cm, 3*cm])
-            row_colors = [colors.HexColor("#111118")]
+            row_colors = [colors.HexColor("#f5f5f5")]
             for _, r in df_live.iterrows():
                 occ = int(r["occupati"]/r["totali"]*100) if r["totali"] > 0 else 0
-                row_colors.append(colors.HexColor("#0f0f18"))
+                row_colors.append(colors.white)
             t2.setStyle(TableStyle([
-                ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#1a1a2e")),
+                ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#eeeeee")),
                 ("TEXTCOLOR",    (0,0), (-1,0), MUTED),
                 ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
                 ("FONTSIZE",     (0,0), (-1,-1), 9),
                 ("TEXTCOLOR",    (0,1), (-1,-1), LIGHT),
                 ("ALIGN",        (1,0), (-1,-1), "CENTER"),
                 ("ROWBACKGROUNDS",(0,1),(-1,-1),
-                 [colors.HexColor("#0f0f18"), colors.HexColor("#0c0c14")]),
-                ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
-                ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#1a1a24")),
+                 [colors.white, colors.HexColor("#fafafa")]),
+                ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#dddddd")),
+                ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#e0e0e0")),
                 ("TOPPADDING",   (0,0), (-1,-1), 6),
                 ("BOTTOMPADDING",(0,0), (-1,-1), 6),
             ]))
@@ -669,16 +669,16 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
                     ])
                 t3 = Table(rows_s, colWidths=[7*cm,3*cm,2.5*cm,2.5*cm,2.5*cm])
                 t3.setStyle(TableStyle([
-                    ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#1a1a2e")),
+                    ("BACKGROUND",   (0,0), (-1,0), colors.HexColor("#eeeeee")),
                     ("TEXTCOLOR",    (0,0), (-1,0), MUTED),
                     ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
                     ("FONTSIZE",     (0,0), (-1,-1), 9),
                     ("TEXTCOLOR",    (0,1), (-1,-1), LIGHT),
                     ("ALIGN",        (1,0), (-1,-1), "CENTER"),
                     ("ROWBACKGROUNDS",(0,1),(-1,-1),
-                     [colors.HexColor("#0f0f18"), colors.HexColor("#0c0c14")]),
-                    ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#1e1e2e")),
-                    ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#1a1a24")),
+                     [colors.white, colors.HexColor("#fafafa")]),
+                    ("BOX",          (0,0), (-1,-1), 0.5, colors.HexColor("#dddddd")),
+                    ("INNERGRID",    (0,0), (-1,-1), 0.3, colors.HexColor("#e0e0e0")),
                     ("TOPPADDING",   (0,0), (-1,-1), 6),
                     ("BOTTOMPADDING",(0,0), (-1,-1), 6),
                 ]))
@@ -687,7 +687,7 @@ def genera_pdf_report(citta: str, df_live: pd.DataFrame,
         # Footer
         story.append(Spacer(1, 1*cm))
         story.append(HRFlowable(width="100%", thickness=0.5,
-                                color=colors.HexColor("#1e1e2e")))
+                                color=colors.HexColor("#dddddd")))
         story.append(Paragraph(
             f"ParkPulse — parkpulse.it · Generato il {datetime.now().strftime('%d/%m/%Y %H:%M')}",
             ParagraphStyle("footer", fontSize=7, textColor=MUTED,
@@ -844,7 +844,7 @@ with st.sidebar:
             ParkPulse è gratuito e open data.<br>
             Se lo trovi utile, offrimi un caffè ☕
         </div>
-        <a href="https://www.paypal.me/fperuzzu/3"
+        <a href="https://paypal.me/fperuzzu/3EUR"
            target="_blank"
            style="display:block;text-align:center;padding:9px;
                   background:linear-gradient(135deg,#ff8c00,#e67e00);
@@ -1263,32 +1263,26 @@ with col_pdf1:
                              key="pdf_citta", label_visibility="collapsed",
                              index=["Bologna","Torino","Firenze"].index(citta_sel))
 with col_pdf2:
-    if st.button("📄 Genera Report PDF", use_container_width=True):
-        with st.spinner("Generazione report..."):
-            df_rep_live    = FETCH_MAP[pdf_citta]()
-            df_rep_storico = query_storico(pdf_citta, str(datetime.now().date()))
-            pdf_bytes = genera_pdf_report(
-                pdf_citta, df_rep_live, df_rep_storico,
-                datetime.now().strftime("%d/%m/%Y")
-            )
-        if pdf_bytes:
-            st.session_state["pdf_bytes"] = pdf_bytes
-            st.session_state["pdf_citta"] = pdf_citta
-        else:
-            st.warning("Installa reportlab: pip install reportlab")
+    genera = st.button("📄 Genera Report PDF", use_container_width=True)
 
-# Download PDF — separato dal bottone genera per evitare sovrapposizioni
-if st.session_state.get("pdf_bytes"):
-    fname_pdf = (f"parkpulse_{st.session_state['pdf_citta'].lower()}"
-                 f"_{datetime.now().strftime('%Y%m%d')}.pdf")
-    with col_pdf2:
+if genera:
+    with st.spinner("Generazione report..."):
+        df_rep_live    = FETCH_MAP[pdf_citta]()
+        df_rep_storico = query_storico(pdf_citta, str(datetime.now().date()))
+        pdf_bytes = genera_pdf_report(
+            pdf_citta, df_rep_live, df_rep_storico,
+            datetime.now().strftime("%d/%m/%Y")
+        )
+    if pdf_bytes:
+        fname_pdf = f"parkpulse_{pdf_citta.lower()}_{datetime.now().strftime('%Y%m%d')}.pdf"
         st.download_button(
-            label=f"⬇ Download PDF — {st.session_state['pdf_citta']}",
-            data=st.session_state["pdf_bytes"],
+            label=f"⬇ Download PDF — {pdf_citta}",
+            data=pdf_bytes,
             file_name=fname_pdf,
             mime="application/pdf",
-            use_container_width=True,
         )
+    else:
+        st.warning("Installa reportlab: pip install reportlab")
 
 st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
             unsafe_allow_html=True)
@@ -1311,7 +1305,7 @@ st.markdown("""
         </span>
     </div>
     <div style="text-align:center;margin-top:4px">
-        <a href="https://www.paypal.me/fperuzzu/3" target="_blank"
+        <a href="https://paypal.me/fperuzzu/3EUR" target="_blank"
            style="display:inline-block;color:#ff8c00;text-decoration:none;font-weight:600;
                   background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.3);
                   padding:6px 20px;border-radius:3px;letter-spacing:0.06em;font-size:0.72rem;">
