@@ -1249,13 +1249,20 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("""
 <div style="display:flex;justify-content:space-between;align-items:center;
             font-family:'DM Mono',monospace;font-size:0.65rem;color:#333;padding-bottom:1rem">
-    <span>© PERULABTECH — Sistema di monitoraggio parcheggi</span>
-    <span>
+    <span>© PeruLabTech — ParkPulse</span>
+    <span style="display:flex;align-items:center;gap:16px">
         <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">Bologna</a>
         &nbsp;·&nbsp;
         <a href="https://opendata.5t.torino.it" style="color:#555;text-decoration:none">Torino</a>
         &nbsp;·&nbsp;
         <a href="https://opendata.comune.fi.it" style="color:#555;text-decoration:none">Firenze</a>
+        &nbsp;·&nbsp;
+        <a href="https://www.paypal.com/paypalme/fperuzzu/3" target="_blank"
+           style="color:#ff8c00;text-decoration:none;font-weight:600;
+                  background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.25);
+                  padding:3px 10px;border-radius:3px;">
+            ☕ Offrimi un caffè
+        </a>
     </span>
 </div>
 """, unsafe_allow_html=True)
