@@ -1,0 +1,45 @@
+name: ParkPulse Telegram Bot
+
+on:
+  schedule:
+    # Broadcast mattutino ogni giorno alle 8:00 ora italiana (7:00 UTC)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'broadcast o polling'
+        required: false
+        default: 'broadcast'
+
+jobs:
+  telegram-broadcast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Download subscribers file from cache
+        uses: actions/cache@v4
+        with:
+          path: subscribers.json
+          key: telegram-subscribers-${{ github.run_id }}
+          restore-keys: |
+            telegram-subscribers-
+
+      - name: Run broadcast
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python telegram_bot.py broadcast
+
+      - name: Save subscribers file
+        uses: actions/cache/save@v4
+        with:
+          path: subscribers.json
+          key: telegram-subscribers-${{ github.run_id }}
