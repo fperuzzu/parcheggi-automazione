@@ -1,5 +1,5 @@
 """
-streamlit_app.py  —  PeruLabTech | Monitoraggio Parcheggi
+streamlit_app.py  —  ParkPulse | Monitoraggio Parcheggi
 ──────────────────────────────────────────────────────────
 Città supportate in tempo reale:
   • Bologna  (3 parcheggi — API Comune di Bologna)
@@ -30,7 +30,7 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-LOGO_URL = "https://raw.githubusercontent.com/fperuzzu/parcheggi-automazione/main/logo.png"
+LOGO_URL = "https://raw.githubusercontent.com/parkpulse/main/logo.png"
 PALETTE  = ["#ff8c00", "#00c864", "#00b4ff", "#ff3c3c", "#b57fff", "#ffd700"]
 
 # Coordinate fallback per Bologna (l'API le include già nella risposta)
@@ -824,7 +824,7 @@ with st.sidebar:
             Contattaci per accesso e pricing.
         </div>
         <a class="cta-btn"
-           href="mailto:info@perulabtech.com?subject=ParkPulse API Access"
+           href="mailto:info@parkpulse.it?subject=ParkPulse API Access"
            style="display:block;text-align:center;padding:7px;border:1px solid #2a2a3a;
                   border-radius:3px;color:#aaa;font-family:'DM Mono',monospace;
                   font-size:0.68rem;text-decoration:none;">
@@ -844,7 +844,7 @@ with st.sidebar:
             ParkPulse è gratuito e open data.<br>
             Se lo trovi utile, offrimi un caffè ☕
         </div>
-        <a href="https://paypal.me/fperuzzu/3EUR"
+        <a href="https://paypal.me/parkpulse/3EUR"
            target="_blank"
            style="display:block;text-align:center;padding:9px;
                   background:linear-gradient(135deg,#ff8c00,#e67e00);
@@ -881,7 +881,7 @@ with st.sidebar:
         Dati aggiornati ogni 30 min<br>
         Fonti: Comune di Bologna,<br>
         5T Torino, Firenze Parcheggi<br><br>
-        © PeruLabTech — ParkPulse
+        © ParkPulse
     </div>
     """, unsafe_allow_html=True)
 
@@ -1301,7 +1301,7 @@ st.markdown("""
 <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#333;padding-bottom:1rem">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;
                 align-items:center;gap:8px;margin-bottom:8px">
-        <span>© PeruLabTech — ParkPulse</span>
+        <span>© ParkPulse</span>
         <span>
             <a href="https://opendata.comune.bologna.it" style="color:#555;text-decoration:none">Bologna</a>
             &nbsp;·&nbsp;
@@ -1311,7 +1311,7 @@ st.markdown("""
         </span>
     </div>
     <div style="text-align:center;margin-top:4px">
-        <a href="https://paypal.me/fperuzzu/3EUR" target="_blank"
+        <a href="https://paypal.me/parkpulse/3EUR" target="_blank"
            style="display:inline-block;color:#ff8c00;text-decoration:none;font-weight:600;
                   background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.3);
                   padding:6px 20px;border-radius:3px;letter-spacing:0.06em;font-size:0.72rem;">
