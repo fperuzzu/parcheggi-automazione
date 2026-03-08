@@ -1187,28 +1187,28 @@ if live_disponibile:
             if not ore_mostra.empty:
                 prob_items = ""
                 for _, row_o in ore_mostra.iterrows():
-                    ora_label = f"{int(row_o['ora']):02d}:00"
-                    prob = int(row_o["prob_libero"])
+                    ora_label = "{:02d}:00".format(int(row_o["ora"]))
+                    prob  = int(row_o["prob_libero"])
                     col_p = "#00c864" if prob >= 50 else "#ffa000" if prob >= 25 else "#ff3c3c"
                     is_now = int(row_o["ora"]) == ora_attuale
-                    prob_items += f"""
-                    <div style="text-align:center;padding:8px 4px;
-                                {'background:#ff8c0018;border-radius:4px;' if is_now else ''}">
-                        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;
-                                    color:#555">{ora_label}{'<br><span style="color:#ff8c00;font-size:0.55rem">ORA</span>' if is_now else ''}</div>
-                        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;
-                                    color:{col_p};line-height:1.1">{prob}%</div>
-                    </div>"""
-                prob_html = f"""
-                <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #1a1a24">
-                    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#555;
-                                text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">
-                        📊 Probabilità di trovare posto — prossime ore
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat({len(ore_mostra)},1fr);gap:4px">
-                        {prob_items}
-                    </div>
-                </div>"""
+                    bg_now = "background:#ff8c0018;border-radius:4px;" if is_now else ""
+                    ora_now = ora_label + ('<br><span style="color:#ff8c00;font-size:0.55rem">ORA</span>' if is_now else "")
+                    prob_items += (
+                        '<div style="text-align:center;padding:8px 4px;' + bg_now + '">'
+                        '<div style="font-family:DM Mono,monospace;font-size:0.62rem;color:#555">'
+                        + ora_now +
+                        '</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.3rem;color:'
+                        + col_p + ';line-height:1.1">' + str(prob) + '%</div></div>'
+                    )
+                n_cols = str(len(ore_mostra))
+                prob_html = (
+                    '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #1a1a24">'
+                    '<div style="font-family:DM Mono,monospace;font-size:0.62rem;color:#555;'
+                    'text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">'
+                    "📊 Probabilità di trovare posto — prossime ore</div>"
+                    '<div style="display:grid;grid-template-columns:repeat(' + n_cols + ',1fr);gap:4px">'
+                    + prob_items + "</div></div>"
+                )
         except Exception:
             pass
 
