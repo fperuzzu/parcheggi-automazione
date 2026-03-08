@@ -924,6 +924,19 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Telegram ──
+    st.markdown("""
+    <div style="margin-bottom:1rem">
+        <a href="https://t.me/parkpulse_it_bot" target="_blank"
+           style="display:block;text-align:center;padding:9px 0;
+                  background:#229ED9;border-radius:3px;color:white;
+                  font-family:'DM Mono',monospace;font-size:0.72rem;
+                  font-weight:700;letter-spacing:0.08em;text-decoration:none">
+            ✈️ Aggiornamenti su Telegram
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("<hr style='border-color:#1a1a24;margin:1rem 0'>", unsafe_allow_html=True)
 
     # ── Copertura ──
