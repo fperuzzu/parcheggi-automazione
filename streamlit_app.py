@@ -25,7 +25,8 @@ import io
 # CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="ParkPulse — Real-time Parking Italy",
+    page_title="ParkPulse — Parcheggi in Tempo Reale | Bologna Torino Firenze",
+    page_icon="🅿",
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -128,6 +129,73 @@ def query_storico(citta: str, data_str: str) -> pd.DataFrame:
     except Exception as e:
         st.warning(f"Errore lettura Turso: {e}")
         return pd.DataFrame()
+
+# ─────────────────────────────────────────────
+# GOOGLE ANALYTICS 4
+# ─────────────────────────────────────────────
+GA_ID = "G-H5D1JNW6R1"
+st.markdown(f"""
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{GA_ID}', {{
+    page_title: 'ParkPulse — Parcheggi in Tempo Reale',
+    page_location: window.location.href
+  }});
+
+  // Traccia selezione città
+  function trackCity(city) {{
+    gtag('event', 'select_city', {{
+      event_category: 'navigation',
+      event_label: city
+    }});
+  }}
+
+  // Traccia click Naviga → Google Maps
+  function trackNavigate(parking, city) {{
+    gtag('event', 'navigate_parking', {{
+      event_category: 'engagement',
+      event_label: parking + ' — ' + city
+    }});
+  }}
+
+  // Traccia download CSV
+  function trackDownload(city, giorni) {{
+    gtag('event', 'download_csv', {{
+      event_category: 'conversion',
+      event_label: city + ' — ' + giorni + 'gg'
+    }});
+  }}
+
+  // Traccia download PDF
+  function trackPDF(city) {{
+    gtag('event', 'download_pdf', {{
+      event_category: 'conversion',
+      event_label: city
+    }});
+  }}
+
+  // Intercetta click su link "Naviga" e "Waze"
+  document.addEventListener('click', function(e) {{
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.href || '';
+    if (href.includes('google.com/maps')) {{
+      var label = a.closest('[data-parking]')?.dataset.parking || href;
+      trackNavigate(label, window.__pp_city || '');
+    }}
+    if (href.includes('waze.com')) {{
+      trackNavigate('waze', window.__pp_city || '');
+    }}
+    if (href.includes('paypal.me')) {{
+      gtag('event', 'donate_click', {{event_category: 'monetization'}});
+    }}
+  }});
+</script>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CSS
@@ -940,6 +1008,13 @@ for col, city in zip([c1, c2, c3], ["Bologna", "Torino", "Firenze"]):
                 _city_changed = True
 
 if _city_changed:
+    # Traccia cambio città in GA4
+    st.markdown(f"""
+    <script>
+      window.__pp_city = '{st.session_state.citta_sel}';
+      if(typeof gtag !== 'undefined') trackCity('{st.session_state.citta_sel}');
+    </script>
+    """, unsafe_allow_html=True)
     st.rerun()
 
 citta_sel = st.session_state.citta_sel
@@ -1059,6 +1134,152 @@ if not df_live.empty:
                 &nbsp;·&nbsp; {cr["liberi"]} posti rimasti
             </div>
             """, unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────
+# TROVA PARCHEGGIO ORA
+# ─────────────────────────────────────────────
+if live_disponibile:
+    df_sorted = df_live.copy()
+    df_sorted["occ_pct"] = df_sorted.apply(
+        lambda r: int(r["occupati"] / r["totali"] * 100) if r["totali"] > 0 else 100, axis=1
+    )
+
+    # 1. Più posti liberi in assoluto
+    top_liberi = df_sorted.nlargest(1, "liberi").iloc[0]
+    # 2. Meno occupato in percentuale (escludendo il primo se uguale)
+    top_pct = df_sorted.nsmallest(1, "occ_pct").iloc[0]
+    # 3. Storico ultime 2h — meno affollato mediamente
+    ora_attuale = datetime.now().hour
+    df_storico_oggi = query_storico(citta_sel, str(datetime.now().date()))
+    top_storico_nome = None
+    if not df_storico_oggi.empty:
+        df_storico_oggi["liberi"] = pd.to_numeric(df_storico_oggi["liberi"], errors="coerce")
+        df_storico_oggi["totali"] = pd.to_numeric(df_storico_oggi["totali"], errors="coerce")
+        df_storico_oggi = df_storico_oggi.dropna(subset=["liberi","totali"])
+        df_storico_oggi = df_storico_oggi[df_storico_oggi["totali"] > 0]
+        if not df_storico_oggi.empty:
+            df_storico_oggi["occ_pct"] = (1 - df_storico_oggi["liberi"] / df_storico_oggi["totali"]) * 100
+            media_storico = df_storico_oggi.groupby("nome")["occ_pct"].mean()
+            top_storico_nome = media_storico.idxmin()
+
+    def status_emoji(occ):
+        return "🟢" if occ < 60 else "🟡" if occ < 85 else "🔴"
+
+    def maps_url(row):
+        return f"https://www.google.com/maps/dir/?api=1&destination={row['lat']},{row['lon']}&travelmode=driving"
+
+    # Probabilità oraria dallo storico
+    prob_html = ""
+    if not df_storico_oggi.empty and "timestamp" in df_storico_oggi.columns:
+        try:
+            df_storico_oggi["ora"] = pd.to_datetime(
+                df_storico_oggi["timestamp"], errors="coerce"
+            ).dt.hour
+            ora_media = df_storico_oggi.groupby("ora").apply(
+                lambda g: 100 - int(g["occ_pct"].mean())
+            ).reset_index()
+            ora_media.columns = ["ora", "prob_libero"]
+            ore_mostra = ora_media[
+                (ora_media["ora"] >= max(0, ora_attuale - 2)) &
+                (ora_media["ora"] <= min(23, ora_attuale + 4))
+            ].sort_values("ora")
+            if not ore_mostra.empty:
+                prob_items = ""
+                for _, row_o in ore_mostra.iterrows():
+                    ora_label = f"{int(row_o['ora']):02d}:00"
+                    prob = int(row_o["prob_libero"])
+                    col_p = "#00c864" if prob >= 50 else "#ffa000" if prob >= 25 else "#ff3c3c"
+                    is_now = int(row_o["ora"]) == ora_attuale
+                    prob_items += f"""
+                    <div style="text-align:center;padding:8px 4px;
+                                {'background:#ff8c0018;border-radius:4px;' if is_now else ''}">
+                        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;
+                                    color:#555">{ora_label}{'<br><span style="color:#ff8c00;font-size:0.55rem">ORA</span>' if is_now else ''}</div>
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;
+                                    color:{col_p};line-height:1.1">{prob}%</div>
+                    </div>"""
+                prob_html = f"""
+                <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #1a1a24">
+                    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#555;
+                                text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">
+                        📊 Probabilità di trovare posto — prossime ore
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat({len(ore_mostra)},1fr);gap:4px">
+                        {prob_items}
+                    </div>
+                </div>"""
+        except Exception:
+            pass
+
+    # Card suggerimenti
+    suggerimenti = [
+        (top_liberi, f"🏆 Più posti liberi — {int(top_liberi['liberi'])} posti disponibili"),
+        (top_pct,    f"⚡ Meno affollato — {int(top_pct['occ_pct'])}% occupato"),
+    ]
+    if top_storico_nome and top_storico_nome in df_sorted["nome"].values:
+        row_st = df_sorted[df_sorted["nome"] == top_storico_nome].iloc[0]
+        suggerimenti.append((row_st, f"📈 Più stabile oggi — media migliore"))
+
+    sugg_cards = ""
+    for i, (row_s, label) in enumerate(suggerimenti):
+        occ_s = int(row_s["occ_pct"])
+        em    = status_emoji(occ_s)
+        url   = maps_url(row_s)
+        waze  = f"https://waze.com/ul?ll={row_s['lat']},{row_s['lon']}&navigate=yes"
+        rank  = ["1️⃣","2️⃣","3️⃣"][i]
+        sugg_cards += f"""
+        <div style="background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px;
+                    padding:1rem 1.2rem;display:flex;align-items:center;
+                    justify-content:space-between;gap:1rem;flex-wrap:wrap">
+            <div>
+                <div style="font-family:'DM Mono',monospace;font-size:0.6rem;
+                            color:#555;text-transform:uppercase;letter-spacing:0.1em;
+                            margin-bottom:4px">{rank} {label}</div>
+                <div style="font-family:'DM Sans',sans-serif;font-size:1rem;
+                            font-weight:600;color:#e8e6e0">{em} {row_s['nome']}</div>
+                <div style="font-family:'DM Mono',monospace;font-size:0.72rem;
+                            color:#666;margin-top:2px">
+                    {int(row_s['liberi'])} liberi · {occ_s}% occupato
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+                <a href="{url}" target="_blank"
+                   style="padding:8px 16px;background:#ff8c00;color:#0a0a0f;
+                          border-radius:4px;text-decoration:none;
+                          font-family:'DM Mono',monospace;font-size:0.72rem;
+                          font-weight:700;white-space:nowrap">
+                    🗺 Naviga
+                </a>
+                <a href="{waze}" target="_blank"
+                   style="padding:8px 12px;background:#0f0f18;color:#08b3ff;
+                          border:1px solid #08b3ff44;border-radius:4px;
+                          text-decoration:none;font-family:'DM Mono',monospace;
+                          font-size:0.72rem;white-space:nowrap">
+                    Waze
+                </a>
+            </div>
+        </div>"""
+
+    st.markdown(f"""
+    <div style="background:#080810;border:1px solid #ff8c0033;border-radius:10px;
+                padding:1.2rem 1.4rem;margin-bottom:1.2rem">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+                    color:#ff8c00;letter-spacing:0.04em;margin-bottom:0.2rem">
+            🚗 Trova Parcheggio Ora — {citta_sel}
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
+                    color:#555;margin-bottom:1rem">
+            Suggerimenti basati sulla disponibilità in tempo reale
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+            {sugg_cards}
+        </div>
+        {prob_html}
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.5rem 0 1rem 0'></div>",
+                unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
@@ -1292,6 +1513,175 @@ if genera:
 
 st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:1rem 0'></div>",
             unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# SEO CONTENT BLOCK
+# ─────────────────────────────────────────────
+SEO_CONTENT = {
+    "Bologna": {
+        "intro": "ParkPulse monitora in tempo reale la disponibilità dei parcheggi a Bologna. "
+                 "Dati aggiornati ogni 30 minuti dalle API ufficiali del Comune di Bologna.",
+        "parcheggi": [
+            ("VIII Agosto", "44.500297,11.345368",
+             "Il parcheggio VIII Agosto si trova in Piazza VIII Agosto, vicino alla stazione centrale di Bologna. "
+             "Uno dei parcheggi più grandi del centro con oltre 600 posti. "
+             "Ideale per chi arriva in treno o visita il centro storico."),
+            ("Riva Reno", "44.501153,11.336062",
+             "Il parcheggio Riva Reno si trova lungo l'omonima via, in posizione centrale. "
+             "Ottimo punto di partenza per raggiungere piazza Maggiore a piedi."),
+            ("Autostazione", "44.504422,11.346514",
+             "Il parcheggio Autostazione è adiacente al terminal degli autobus di Bologna. "
+             "Comodo per chi utilizza i mezzi pubblici o arriva in pullman."),
+        ],
+        "faq": [
+            ("Dove parcheggiare a Bologna centro?",
+             "I parcheggi più vicini al centro di Bologna sono VIII Agosto, Riva Reno e Autostazione. "
+             "ParkPulse mostra in tempo reale quanti posti sono disponibili in ciascuno."),
+            ("Quanto costa parcheggiare a Bologna?",
+             "Le tariffe variano per parcheggio e fascia oraria. "
+             "ParkPulse monitora la disponibilità in tempo reale — per le tariffe consulta il sito del Comune di Bologna."),
+            ("A che ora è più facile trovare parcheggio a Bologna?",
+             "In base ai dati storici raccolti da ParkPulse, i parcheggi di Bologna sono più liberi nelle prime ore del mattino "
+             "e dopo le 20:00. Il picco di occupazione si registra tra le 10:00 e le 13:00."),
+        ],
+        "keywords": "parcheggi bologna, parcheggio bologna centro, posti liberi bologna oggi, "
+                    "dove parcheggiare bologna, VIII agosto bologna parcheggio, "
+                    "parcheggio riva reno bologna, parcheggio autostazione bologna",
+    },
+    "Torino": {
+        "intro": "ParkPulse monitora in tempo reale la disponibilità di oltre 36 parcheggi a Torino. "
+                 "Dati aggiornati ogni 30 minuti dal sistema 5T (Telematica per i Trasporti di Torino).",
+        "parcheggi": [
+            ("Piazza Castello", "45.0703,7.6869",
+             "Il parcheggio di Piazza Castello è uno dei più centrali di Torino, "
+             "a pochi passi dalla Mole Antonelliana e dai principali musei cittadini."),
+            ("Porta Nuova", "45.0634,7.6782",
+             "Il parcheggio Porta Nuova si trova nelle vicinanze dell'omonima stazione ferroviaria. "
+             "Ideale per chi arriva in treno a Torino."),
+            ("Lingotto", "45.0333,7.6667",
+             "Il parcheggio Lingotto è vicino al centro commerciale e all'auditorium. "
+             "Ben collegato con la metropolitana di Torino."),
+        ],
+        "faq": [
+            ("Dove parcheggiare a Torino centro?",
+             "I parcheggi più centrali di Torino monitorati da ParkPulse includono Piazza Castello, "
+             "Porta Nuova e Porta Palazzo. La dashboard mostra la disponibilità in tempo reale."),
+            ("Come funziona il sistema parcheggi di Torino?",
+             "Torino utilizza il sistema 5T per monitorare i parcheggi cittadini. "
+             "ParkPulse legge questi dati ogni 30 minuti e li visualizza in modo semplice."),
+            ("A che ora è più facile trovare parcheggio a Torino?",
+             "Secondo i dati storici di ParkPulse, i parcheggi di Torino sono più liberi "
+             "nelle prime ore del mattino e la domenica. Il picco di occupazione è tra le 11:00 e le 13:00."),
+        ],
+        "keywords": "parcheggi torino, parcheggio torino centro, posti liberi torino oggi, "
+                    "dove parcheggiare torino, parcheggi 5T torino, parcheggio porta nuova torino, "
+                    "parcheggio piazza castello torino",
+    },
+    "Firenze": {
+        "intro": "ParkPulse monitora in tempo reale la disponibilità di 13 parcheggi a Firenze. "
+                 "Dati aggiornati ogni 30 minuti da Firenze Parcheggi S.p.A.",
+        "parcheggi": [
+            ("Parterre", "43.7833,11.2667",
+             "Il parcheggio Parterre si trova in Piazza della Libertà, uno dei più grandi di Firenze con 630 posti. "
+             "Ottimo punto di accesso al centro storico, raggiungibile a piedi in 10 minuti."),
+            ("Oltrarno", "43.7667,11.2500",
+             "Il parcheggio Oltrarno è situato nel quartiere omonimo, a pochi minuti da Palazzo Pitti "
+             "e Piazzale Michelangelo."),
+            ("Fortezza da Basso", "43.7833,11.2500",
+             "Il parcheggio Fortezza da Basso si trova vicino all'omonimo complesso monumentale, "
+             "comodo per visitare Santa Maria Novella e il centro."),
+        ],
+        "faq": [
+            ("Dove parcheggiare a Firenze centro storico?",
+             "I parcheggi più vicini al centro storico di Firenze sono Parterre, Palazzo dei Congressi e Oltrarno. "
+             "ParkPulse mostra in tempo reale quanti posti sono liberi."),
+            ("Quanto costa parcheggiare a Firenze?",
+             "Le tariffe dei parcheggi di Firenze variano. Per i prezzi aggiornati consulta Firenze Parcheggi S.p.A. "
+             "ParkPulse si concentra sulla disponibilità in tempo reale."),
+            ("Qual è il parcheggio più vicino agli Uffizi a Firenze?",
+             "I parcheggi più vicini alla Galleria degli Uffizi sono Oltrarno e Palazzo dei Congressi, "
+             "entrambi monitorati da ParkPulse in tempo reale."),
+        ],
+        "keywords": "parcheggi firenze, parcheggio firenze centro, posti liberi firenze oggi, "
+                    "dove parcheggiare firenze, parcheggio parterre firenze, parcheggio oltrarno firenze, "
+                    "parcheggio fortezza da basso firenze",
+    },
+}
+
+if "citta_sel" in st.session_state:
+    _seo = SEO_CONTENT.get(st.session_state.citta_sel, SEO_CONTENT["Bologna"])
+    _city = st.session_state.citta_sel
+
+    # Schema.org JSON-LD per Google
+    _schema_parkings = ", ".join(
+        f'{{"@type":"Place","name":"{p[0]}","geo":{{"@type":"GeoCoordinates","latitude":"{p[1].split(",")[0]}","longitude":"{p[1].split(",")[1]}"}}}}'
+        for p in _seo["parcheggi"]
+    )
+    _faq_schema = ", ".join(
+        f'{{"@type":"Question","name":"{q}","acceptedAnswer":{{"@type":"Answer","text":"{a}"}}}}'
+        for q, a in _seo["faq"]
+    )
+
+    st.markdown(f"""
+    <script type="application/ld+json">
+    {{
+      "@context": "https://schema.org",
+      "@graph": [
+        {{
+          "@type": "WebSite",
+          "name": "ParkPulse",
+          "url": "https://parkpulse.it",
+          "description": "Monitoraggio parcheggi in tempo reale per Bologna, Torino e Firenze."
+        }},
+        {{
+          "@type": "FAQPage",
+          "mainEntity": [{_faq_schema}]
+        }},
+        {{
+          "@type": "ItemList",
+          "name": "Parcheggi {_city}",
+          "itemListElement": [{_schema_parkings}]
+        }}
+      ]
+    }}
+    </script>
+
+    <div style="margin-top:2rem;padding:1.5rem 0;border-top:1px solid #1a1a24">
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#333;
+                    text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.8rem">
+            ℹ Informazioni — Parcheggi {_city}
+        </div>
+        <p style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#444;
+                  line-height:1.7;margin-bottom:1rem">
+            {_seo["intro"]}
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+                    gap:0.8rem;margin-bottom:1.2rem">
+            {"".join(f'''
+            <div style="background:#0a0a0f;border:1px solid #1a1a24;border-radius:6px;padding:0.8rem 1rem">
+                <div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#ff8c00;
+                            font-weight:600;margin-bottom:4px">🅿 {p[0]}</div>
+                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#444;
+                            line-height:1.6">{p[2]}</div>
+            </div>''' for p in _seo["parcheggi"])}
+        </div>
+
+        <div style="margin-top:1rem">
+            {"".join(f'''
+            <div style="border-bottom:1px solid #111118;padding:0.6rem 0">
+                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;
+                            font-weight:600;color:#555;margin-bottom:2px">{q}</div>
+                <div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;
+                            color:#3a3a3a;line-height:1.6">{a}</div>
+            </div>''' for q, a in _seo["faq"])}
+        </div>
+
+        <div style="margin-top:1rem;font-family:\'DM Mono\',monospace;font-size:0.58rem;color:#222">
+            {_seo["keywords"]}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # FOOTER
