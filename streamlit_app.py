@@ -1088,10 +1088,54 @@ if live_disponibile:
     st.markdown('<div class="section-label" style="margin-bottom:4px">Mappa live</div>',
                 unsafe_allow_html=True)
     centro = MAPPA_CENTRI.get(citta_sel, [44.499, 11.343])
-    m = folium.Map(location=centro, zoom_start=14, tiles="cartodbdark_matter")
+    m = folium.Map(
+        location=centro, zoom_start=14, tiles="cartodbdark_matter",
+        scrollWheelZoom=False,   # no scroll wheel hijack
+        dragging=True,
+    )
+    # Su mobile disabilita il drag per non bloccare lo scroll della pagina
+    m.options["tap"] = False
     for row in df_live.itertuples():
         occ = int(row.occupati / row.totali * 100) if row.totali > 0 else 0
         aggiungi_marker(m, row.lat, row.lon, row.nome, occ, row.liberi, row.totali)
+    # Inietta CSS per evitare che la mappa catturi il touch scroll
+    m.get_root().html.add_child(folium.Element("""
+    <style>
+    .leaflet-container {
+        touch-action: pan-x pan-y !important;
+    }
+    @media (max-width: 768px) {
+        .leaflet-container {
+            touch-action: none !important;
+            height: 320px !important;
+        }
+    }
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Aggiunge un overlay tap-to-interact su mobile
+        var maps = document.querySelectorAll('.leaflet-container');
+        maps.forEach(function(mapEl) {
+            var overlay = document.createElement('div');
+            overlay.style.cssText = [
+                'position:absolute','top:0','left:0','right:0','bottom:0',
+                'z-index:1000','background:rgba(0,0,0,0.5)',
+                'display:flex','align-items:center','justify-content:center',
+                'color:#ff8c00','font-family:monospace','font-size:13px',
+                'letter-spacing:0.08em','cursor:pointer','border-radius:2px',
+                'backdrop-filter:blur(1px)',
+            ].join(';');
+            overlay.textContent = '👆 Tocca per interagire con la mappa';
+            overlay.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+            mapEl.style.position = 'relative';
+            mapEl.appendChild(overlay);
+            overlay.addEventListener('click', function() {
+                overlay.style.display = 'none';
+            });
+        });
+    });
+    </script>
+    """))
     folium_static(m, width=1400, height=520)
     st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.8rem 0'></div>",
                 unsafe_allow_html=True)
