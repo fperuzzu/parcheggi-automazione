@@ -134,8 +134,8 @@ def query_storico(citta: str, data_str: str) -> pd.DataFrame:
 # GOOGLE ANALYTICS 4
 # ─────────────────────────────────────────────
 GA_ID = "G-H5D1JNW6R1"
-st.markdown(f"""
-<!-- Google tag (gtag.js) -->
+import streamlit.components.v1 as _components
+_components.html(f"""
 <script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -143,59 +143,10 @@ st.markdown(f"""
   gtag('js', new Date());
   gtag('config', '{GA_ID}', {{
     page_title: 'ParkPulse — Parcheggi in Tempo Reale',
-    page_location: window.location.href
-  }});
-
-  // Traccia selezione città
-  function trackCity(city) {{
-    gtag('event', 'select_city', {{
-      event_category: 'navigation',
-      event_label: city
-    }});
-  }}
-
-  // Traccia click Naviga → Google Maps
-  function trackNavigate(parking, city) {{
-    gtag('event', 'navigate_parking', {{
-      event_category: 'engagement',
-      event_label: parking + ' — ' + city
-    }});
-  }}
-
-  // Traccia download CSV
-  function trackDownload(city, giorni) {{
-    gtag('event', 'download_csv', {{
-      event_category: 'conversion',
-      event_label: city + ' — ' + giorni + 'gg'
-    }});
-  }}
-
-  // Traccia download PDF
-  function trackPDF(city) {{
-    gtag('event', 'download_pdf', {{
-      event_category: 'conversion',
-      event_label: city
-    }});
-  }}
-
-  // Intercetta click su link "Naviga" e "Waze"
-  document.addEventListener('click', function(e) {{
-    var a = e.target.closest('a');
-    if (!a) return;
-    var href = a.href || '';
-    if (href.includes('google.com/maps')) {{
-      var label = a.closest('[data-parking]')?.dataset.parking || href;
-      trackNavigate(label, window.__pp_city || '');
-    }}
-    if (href.includes('waze.com')) {{
-      trackNavigate('waze', window.__pp_city || '');
-    }}
-    if (href.includes('paypal.me')) {{
-      gtag('event', 'donate_click', {{event_category: 'monetization'}});
-    }}
+    page_location: 'https://parkpulse.it'
   }});
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 # ─────────────────────────────────────────────
 # CSS
@@ -1021,7 +972,7 @@ for col, city in zip([c1, c2, c3], ["Bologna", "Torino", "Firenze"]):
                 _city_changed = True
 
 if _city_changed:
-    # Traccia cambio città in GA4
+    # GA4 tracking rimosso (gestito da components.html)
     st.markdown(f"""
     <script>
       window.__pp_city = '{st.session_state.citta_sel}';
