@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Parcheggi Bologna — Disponibilità in Tempo Reale | ParkPulse</title>
+  <meta name="description" content="Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze. Dati aggiornati ogni 15 minuti da fonti ufficiali. Gratuito.">
+  <meta name="keywords" content="parcheggi bologna, parcheggio bologna centro, posti liberi bologna, VIII agosto parcheggio, autostazione bologna, riva reno parcheggio">
+  <meta name="author" content="ParkPulse — ParkPulse">
+  <link rel="canonical" href="https://parkpulse.it/bologna">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Parcheggi Bologna — Disponibilità in Tempo Reale | ParkPulse">
+  <meta property="og:description" content="Monitora i parcheggi di Bologna in tempo reale. VIII Agosto, Autostazione, Riva Reno — disponibilità posti e occupazione aggiornata ogni 30 minuti.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://parkpulse.it/bologna">
+  <meta property="og:site_name" content="ParkPulse">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Parcheggi Bologna — Disponibilità in Tempo Reale | ParkPulse">
+  <meta name="twitter:description" content="Monitora i parcheggi di Bologna in tempo reale. VIII Agosto, Autostazione, Riva Reno — disponibilità posti e occupazione aggiornata ogni 30 minuti.">
+
+  <!-- Geo -->
+  <meta name="geo.region" content="IT">
+  <meta name="geo.placename" content="Bologna">
+  <meta name="geo.position" content="44.4949;11.3426">
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Parcheggi Bologna — Disponibilità in Tempo Reale | ParkPulse",
+  "description": "Monitora i parcheggi di Bologna in tempo reale. VIII Agosto, Autostazione, Riva Reno — disponibilità posti e occupazione aggiornata ogni 30 minuti.",
+  "url": "https://parkpulse.it/bologna",
+  "mainEntity": {
+    "@type": "ItemList",
+    "name": "Parcheggi Bologna",
+    "itemListElement": [{"@type":"ListItem","position":1,"name":"VIII Agosto"}, {"@type":"ListItem","position":2,"name":"Autostazione"}, {"@type":"ListItem","position":3,"name":"Riva Reno"}]
+  }
+}</script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      background:#0a0a0f;color:#e8e6e0;
+      font-family:'DM Sans',sans-serif;
+      min-height:100vh;
+    }
+
+    /* NAV */
+    nav{
+      position:sticky;top:0;z-index:100;
+      background:rgba(10,10,15,0.92);
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid #1a1a24;
+      padding:0.7rem 2rem;
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .nav-brand{
+      font-family:'Bebas Neue',sans-serif;font-size:1.3rem;
+      color:#ff8c00;letter-spacing:0.06em;text-decoration:none;
+    }
+    .nav-links{display:flex;gap:1.5rem;list-style:none}
+    .nav-links a{
+      font-family:'DM Mono',monospace;font-size:0.65rem;
+      color:#555;text-decoration:none;letter-spacing:0.1em;
+      text-transform:uppercase;transition:color 0.15s;
+    }
+    .nav-links a:hover{color:#ff8c00}
+    .nav-links a.active{color:#ff8c00}
+
+    /* HERO */
+    .hero{
+      padding:5rem 2rem 3rem;
+      max-width:860px;margin:0 auto;
+    }
+    .hero-eyebrow{
+      font-family:'DM Mono',monospace;font-size:0.65rem;
+      color:#ff8c00;text-transform:uppercase;letter-spacing:0.2em;
+      margin-bottom:1rem;
+    }
+    h1{
+      font-family:'Bebas Neue',sans-serif;
+      font-size:clamp(3rem,8vw,5.5rem);
+      line-height:0.95;letter-spacing:0.02em;
+      color:#e8e6e0;margin-bottom:1.2rem;
+    }
+    h1 span{color:#ff8c00}
+    .hero-sub{
+      font-size:1rem;color:#666;line-height:1.7;
+      max-width:520px;margin-bottom:2rem;
+    }
+    .hero-cta{
+      display:inline-flex;align-items:center;gap:8px;
+      background:#ff8c00;color:#0a0a0f;
+      padding:12px 28px;border-radius:4px;
+      font-family:'DM Mono',monospace;font-size:0.8rem;
+      font-weight:600;letter-spacing:0.08em;
+      text-decoration:none;transition:opacity 0.15s;
+    }
+    .hero-cta:hover{opacity:0.88}
+    .hero-cta-sec{
+      display:inline-flex;align-items:center;gap:8px;
+      border:1px solid #1e1e2e;color:#888;
+      padding:12px 28px;border-radius:4px;
+      font-family:'DM Mono',monospace;font-size:0.8rem;
+      letter-spacing:0.08em;text-decoration:none;
+      margin-left:12px;transition:all 0.15s;
+    }
+    .hero-cta-sec:hover{border-color:#444;color:#ccc}
+
+    /* FACTS */
+    .facts{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+      max-width:860px;margin:0 auto 4rem;padding:0 2rem;
+    }
+    @media(max-width:600px){.facts{grid-template-columns:1fr 1fr}}
+
+    /* SECTION */
+    section{max-width:860px;margin:0 auto;padding:3rem 2rem}
+    .section-label{
+      font-family:'DM Mono',monospace;font-size:0.62rem;
+      color:#ff8c00;text-transform:uppercase;letter-spacing:0.2em;
+      margin-bottom:0.8rem;
+    }
+    h2{
+      font-family:'Bebas Neue',sans-serif;font-size:2rem;
+      letter-spacing:0.04em;margin-bottom:1.5rem;color:#e8e6e0;
+    }
+
+    /* PARKINGS LIST */
+    .parkings-list{
+      display:flex;flex-wrap:wrap;gap:8px;margin-bottom:2rem;
+    }
+
+    /* APP PREVIEW */
+    .app-preview{
+      border:1px solid #1a1a24;border-radius:8px;
+      overflow:hidden;margin-top:1.5rem;
+      box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    }
+    .app-preview-bar{
+      background:#111118;padding:10px 16px;
+      display:flex;align-items:center;gap:8px;
+      border-bottom:1px solid #1a1a24;
+    }
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+    .app-preview-url{
+      flex:1;background:#0a0a0f;border:1px solid #1e1e2e;
+      border-radius:3px;padding:3px 10px;
+      font-family:'DM Mono',monospace;font-size:0.65rem;color:#555;
+      margin:0 8px;
+    }
+
+    /* FAQ */
+    .faq-grid{margin-top:1rem}
+
+    /* FOOTER */
+    footer{
+      border-top:1px solid #1a1a24;
+      padding:2rem;
+      display:flex;flex-wrap:wrap;justify-content:space-between;
+      align-items:center;gap:1rem;
+      font-family:'DM Mono',monospace;font-size:0.62rem;color:#333;
+      max-width:100%;
+    }
+    footer a{color:#444;text-decoration:none}
+    footer a:hover{color:#ff8c00}
+
+    /* Divider */
+    .divider{border:none;border-top:1px solid #1a1a24;margin:0}
+
+    /* Animate on load */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .hero-eyebrow{animation:fadeUp 0.5s ease both}
+    h1{animation:fadeUp 0.5s 0.1s ease both}
+    .hero-sub{animation:fadeUp 0.5s 0.2s ease both}
+    .hero-cta,.hero-cta-sec{animation:fadeUp 0.5s 0.3s ease both}
+  </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-H5D1JNW6R1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-H5D1JNW6R1');
+</script>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="https://parkpulse.it/">🅿 ParkPulse</a>
+  <ul class="nav-links">
+    <li><a href="https://parkpulse.it/bologna" class="active">Bologna</a></li>
+    <li><a href="https://parkpulse.it/torino"  >Torino</a></li>
+    <li><a href="https://parkpulse.it/firenze" >Firenze</a></li>
+    <li><a href="https://parcheggi-automazione.streamlit.app" target="_blank">Dashboard →</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">🅿 ParkPulse · Italia</div>
+  <h1>Parcheggi <span>Bologna</span></h1>
+  <p class="hero-sub">
+    Scopri in tempo reale quanti posti sono disponibili nei parcheggi di Bologna.
+    Dati aggiornati ogni 30 minuti, mappa interattiva e storico giornaliero.
+  </p>
+  <a class="hero-cta" href="https://parcheggi-automazione.streamlit.app/?city=bologna" target="_blank">
+    Apri Dashboard Live →
+  </a>
+  <a class="hero-cta-sec" href="#faq">Scopri di più</a>
+
+      <div style="margin-top:1rem">
+        <a href="https://t.me/parkpulse_it_bot" target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;
+                  background:#229ED9;color:white;padding:12px 24px;
+                  border-radius:4px;text-decoration:none;
+                  font-family:'DM Mono',sans-serif;font-size:0.8rem;
+                  font-weight:600;letter-spacing:0.06em;margin-right:12px">
+          ✈️ Bot Telegram
+        </a>
+      </div>
+</div>
+
+<!-- FACTS -->
+<div class="facts">
+  
+        <div style="text-align:center;padding:1.5rem 1rem;
+                    background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;
+                        color:#ff8c00;letter-spacing:0.03em;line-height:1">3</div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;
+                        color:#555;text-transform:uppercase;letter-spacing:0.12em;
+                        margin-top:4px">parcheggi</div>
+        </div>
+        <div style="text-align:center;padding:1.5rem 1rem;
+                    background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;
+                        color:#ff8c00;letter-spacing:0.03em;line-height:1">~1.400</div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;
+                        color:#555;text-transform:uppercase;letter-spacing:0.12em;
+                        margin-top:4px">posti totali</div>
+        </div>
+        <div style="text-align:center;padding:1.5rem 1rem;
+                    background:#0f0f18;border:1px solid #1e1e2e;border-radius:8px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;
+                        color:#ff8c00;letter-spacing:0.03em;line-height:1">30 min</div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;
+                        color:#555;text-transform:uppercase;letter-spacing:0.12em;
+                        margin-top:4px">aggiornamento</div>
+        </div>
+</div>
+
+<hr class="divider">
+
+<!-- PARCHEGGI MONITORATI -->
+<section>
+  <div class="section-label">Copertura</div>
+  <h2>Parcheggi Monitorati</h2>
+  <p style="color:#666;font-size:0.9rem;line-height:1.7;margin-bottom:1.2rem">
+    ParkPulse raccoglie dati in tempo reale per i seguenti parcheggi di Bologna,
+    aggiornati ogni 30 minuti tramite le API ufficiali.
+  </p>
+  <div class="parkings-list">
+    <span style="display:inline-block;padding:4px 14px;margin:3px;border:1px solid #ff8c0044;border-radius:20px;font-size:0.78rem;color:#ff8c00;background:#ff8c000f">VIII Agosto</span><span style="display:inline-block;padding:4px 14px;margin:3px;border:1px solid #ff8c0044;border-radius:20px;font-size:0.78rem;color:#ff8c00;background:#ff8c000f">Autostazione</span><span style="display:inline-block;padding:4px 14px;margin:3px;border:1px solid #ff8c0044;border-radius:20px;font-size:0.78rem;color:#ff8c00;background:#ff8c000f">Riva Reno</span>
+  </div>
+
+  <!-- App preview mock -->
+  <div class="app-preview">
+    <div class="app-preview-bar">
+      <span class="dot" style="background:#ff5f57"></span>
+      <span class="dot" style="background:#febc2e"></span>
+      <span class="dot" style="background:#28c840"></span>
+      <div class="app-preview-url">parcheggi-automazione.streamlit.app</div>
+    </div>
+    <div style="background:#0a0a0f;padding:1.5rem;text-align:center">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#444;
+                  margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.1em">
+        Dashboard live — Bologna
+      </div>
+      <a href="https://parcheggi-automazione.streamlit.app" target="_blank"
+         style="display:inline-block;padding:10px 24px;
+                background:#ff8c0018;border:1px solid #ff8c0044;
+                color:#ff8c00;border-radius:4px;
+                font-family:'DM Mono',monospace;font-size:0.75rem;
+                text-decoration:none;letter-spacing:0.08em">
+        Apri dashboard interattiva →
+      </a>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-label">FAQ</div>
+  <h2>Domande Frequenti</h2>
+  <div class="faq-grid">
+    
+        <div style="border-bottom:1px solid #1a1a24;padding:1.2rem 0">
+            <div style="font-family:'DM Sans',sans-serif;font-weight:600;
+                        color:#e8e6e0;font-size:0.95rem;margin-bottom:6px">
+                Quali parcheggi sono monitorati a Bologna?
+            </div>
+            <div style="font-family:'DM Sans',sans-serif;color:#666;
+                        font-size:0.88rem;line-height:1.7">ParkPulse monitora VIII Agosto, Autostazione e Riva Reno nel centro di Bologna, con dati aggiornati ogni 30 minuti tramite le API del Comune di Bologna.</div>
+        </div>
+        <div style="border-bottom:1px solid #1a1a24;padding:1.2rem 0">
+            <div style="font-family:'DM Sans',sans-serif;font-weight:600;
+                        color:#e8e6e0;font-size:0.95rem;margin-bottom:6px">
+                Dove si trova il parcheggio VIII Agosto?
+            </div>
+            <div style="font-family:'DM Sans',sans-serif;color:#666;
+                        font-size:0.88rem;line-height:1.7">Il parcheggio VIII Agosto si trova in Piazza VIII Agosto vicino alla stazione centrale, uno dei più grandi del centro con oltre 600 posti.</div>
+        </div>
+        <div style="border-bottom:1px solid #1a1a24;padding:1.2rem 0">
+            <div style="font-family:'DM Sans',sans-serif;font-weight:600;
+                        color:#e8e6e0;font-size:0.95rem;margin-bottom:6px">
+                Come trovare parcheggio libero a Bologna?
+            </div>
+            <div style="font-family:'DM Sans',sans-serif;color:#666;
+                        font-size:0.88rem;line-height:1.7">Con ParkPulse vedi in tempo reale quanti posti sono disponibili nei principali parcheggi del centro, aggiornati ogni 30 minuti dalla dashboard gratuita.</div>
+        </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CTA FINALE -->
+<section style="text-align:center;padding:4rem 2rem">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;
+              color:#e8e6e0;margin-bottom:0.8rem">
+    Trova Parcheggio a Bologna
+  </div>
+  <p style="color:#555;font-size:0.9rem;margin-bottom:1.8rem">
+    Dashboard gratuita · Aggiornamento ogni 30 min · Nessuna registrazione
+  </p>
+  <a class="hero-cta" href="https://parcheggi-automazione.streamlit.app" target="_blank">
+    Apri ParkPulse →
+  </a>
+  <div style="margin-top:1.5rem">
+    <a href="https://paypal.me/parkpulse/3EUR" target="_blank"
+       style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#444;
+              text-decoration:none;border-bottom:1px solid #222">
+      ☕ Sostieni il progetto
+    </a>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 ParkPulse — <a href="https://parkpulse.it/">ParkPulse</a></span>
+  <span style="display:flex;gap:1rem;flex-wrap:wrap">
+    <a href="https://parkpulse.it/bologna">Bologna</a>
+    <a href="https://parkpulse.it/torino">Torino</a>
+    <a href="https://parkpulse.it/firenze">Firenze</a>
+    <a href="https://parcheggi-automazione.streamlit.app" target="_blank">Dashboard</a>
+    <a href="/cdn-cgi/l/email-protection#046d6a626b44746176716865667061676c2a676b69">Contat
