@@ -1434,31 +1434,52 @@ df_storico = query_storico(citta_sel, str(st.session_state.data_att))
 if not df_storico.empty:
     df_storico["timestamp"] = pd.to_datetime(df_storico["timestamp"])
     df_storico["liberi"]    = pd.to_numeric(df_storico["liberi"], errors="coerce")
+    df_storico["totali"]    = pd.to_numeric(df_storico["totali"], errors="coerce")
+    df_storico = df_storico.dropna(subset=["liberi", "totali"])
+    df_storico = df_storico[df_storico["totali"] > 0]
+    # Calcola occupazione % invece di posti assoluti
+    df_storico["occ_pct"] = ((1 - df_storico["liberi"] / df_storico["totali"]) * 100).round(1)
 
-    nomi = (list(df_storico["nome"].unique())
-            if parcheggio_sel == "Tutti" else [parcheggio_sel])
+    tutti_nomi = list(df_storico["nome"].unique())
+
+    if parcheggio_sel == "Tutti":
+        # Limita a top 10 per capacità media per leggibilità
+        top10 = (df_storico.groupby("nome")["totali"].mean()
+                 .nlargest(10).index.tolist())
+        nomi = top10
+        nota = f"Top 10 parcheggi per capacità — seleziona un singolo parcheggio per vederlo in dettaglio"
+    else:
+        nomi = [parcheggio_sel]
+        nota = ""
 
     traces = []
     for idx, p in enumerate(nomi):
-        d = df_storico[df_storico["nome"] == p].dropna(subset=["liberi"])
+        d = df_storico[df_storico["nome"] == p].sort_values("timestamp")
         if d.empty:
             continue
         c = PALETTE[idx % len(PALETTE)]
         traces.append(go.Scatter(
             x=list(d["timestamp"]),
-            y=list(d["liberi"].astype(int)),
+            y=list(d["occ_pct"]),
             name=p, mode="lines+markers",
             line=dict(color=c, width=2),
             marker=dict(size=4, color=c),
-            # Niente fill — le aree colorate si sovrapponevano nascondendo le linee
+            hovertemplate="%{y:.1f}% occupato<extra>" + p + "</extra>",
         ))
 
     if traces:
+        if nota:
+            st.markdown(
+                '<div style="font-family:DM Mono,monospace;font-size:0.62rem;'
+                'color:#444;margin-bottom:4px">' + nota + '</div>',
+                unsafe_allow_html=True
+            )
         fig = go.Figure(data=traces)
         fig.update_xaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False,
                          tickformat="%H:%M", tickfont=dict(color="#888", size=11))
         fig.update_yaxes(showgrid=True, gridcolor="#1a1a24", zeroline=False,
-                         tickfont=dict(color="#888", size=11))
+                         tickfont=dict(color="#888", size=11),
+                         ticksuffix="%", range=[0, 105])
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             height=360, margin=dict(l=10, r=10, t=20, b=10),
@@ -1467,20 +1488,23 @@ if not df_storico.empty:
                 bgcolor="rgba(10,10,20,0.92)",
                 bordercolor="#333344",
                 borderwidth=1,
-                font=dict(color="#cccccc", size=12),
+                font=dict(color="#cccccc", size=11),
+                orientation="v",
+                x=1.01, y=1,
             ),
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Nessun dato storico per il parcheggio selezionato.")
 else:
-    st.markdown("""
-    <div style="background:#111118;border:1px solid #1e1e2e;border-radius:2px;
-                padding:2rem;text-align:center;
-                font-family:'DM Mono',monospace;font-size:0.8rem;color:#444">
-        [ STORICO IN COSTRUZIONE — nessun dato per la data selezionata ]
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="background:#111118;border:1px solid #1e1e2e;border-radius:2px;'
+        'padding:2rem;text-align:center;'
+        'font-family:DM Mono,monospace;font-size:0.8rem;color:#444">'
+        '[ STORICO IN COSTRUZIONE — nessun dato per la data selezionata ]'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 
 # ─────────────────────────────────────────────
