@@ -224,13 +224,15 @@ def broadcast_morning():
     subs = load_subscribers()
     sent = 0
     cache = {}
-    for chat_id, info in subs.items():
+    for key, info in subs.items():
         if not info.get("active"):
             continue
         city = info.get("city", "bologna")
+        # Supporta sia formato {"chat_id": 123} che chiave numerica
+        chat_id = info.get("chat_id") or int(key)
         if city not in cache:
             cache[city] = format_snapshot(city)
-        send_message(int(chat_id), f"☀️ *Buongiorno da ParkPulse!*\n\n" + cache[city])
+        send_message(int(chat_id), "☀️ *Buongiorno da ParkPulse!*\n\n" + cache[city])
         sent += 1
     print(f"Broadcast inviato a {sent} iscritti")
 
