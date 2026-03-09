@@ -2,7 +2,7 @@ name: Auto Update Parcheggi
 
 on:
   schedule:
-    - cron: '0,30 * * * *'   # ogni 30 minuti
+    - cron: '*/15 * * * *'   # ogni 15 minuti (GitHub può saltarne qualcuno di notte)
   workflow_dispatch:
 
 jobs:
@@ -34,4 +34,23 @@ jobs:
             python motore_db.py
           fi
 
-      # Nessun commit — il DB vive su Turso, non nel repo
+      - name: Aggiorna sitemap lastmod
+        run: |
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%S+00:00")
+          cat > sitemap.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://parkpulse.it/</loc><lastmod>${NOW}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
+  <url><loc>https://parkpulse.it/bologna</loc><lastmod>${NOW}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
+  <url><loc>https://parkpulse.it/torino</loc><lastmod>${NOW}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
+  <url><loc>https://parkpulse.it/firenze</loc><lastmod>${NOW}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
+</urlset>
+EOF
+
+      - name: Commit sitemap aggiornata
+        run: |
+          git config user.name "ParkPulse Bot"
+          git config user.email "bot@parkpulse.it"
+          git add sitemap.xml
+          git diff --staged --quiet || git commit -m "chore: aggiorna sitemap lastmod"
+          git push
