@@ -1351,8 +1351,9 @@ if live_disponibile:
         height=max(260, len(df_bar) * 38),
         margin=dict(l=10, r=80, t=10, b=10),
         bargap=0.35, showlegend=False,
+        dragmode=False,
     )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig_bar, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False, "doubleClick": False})
     st.markdown("<div style='border-bottom:1px solid #1a1a24;margin:0.8rem 0'></div>",
                 unsafe_allow_html=True)
 
@@ -1435,6 +1436,7 @@ if not df_storico.empty:
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             height=360, margin=dict(l=10, r=10, t=20, b=10),
             hovermode="x unified", showlegend=True,
+            dragmode=False,
             legend=dict(
                 bgcolor="rgba(10,10,20,0.92)",
                 bordercolor="#333344",
@@ -1444,7 +1446,7 @@ if not df_storico.empty:
                 x=1.01, y=1,
             ),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False, "doubleClick": False})
     else:
         st.info("Nessun dato storico per il parcheggio selezionato.")
 else:
