@@ -60,17 +60,19 @@ def fetch_torino():
     try:
         url = "https://opendata.5t.torino.it/get_pk"
         r = requests.get(url, timeout=10)
-        NS = "{https://simone.5t.torino.it/ns/traffic_data.xsd}"
         root = ET.fromstring(r.content)
         parcheggi = []
-        for pk in root.findall(f".//{NS}ParkingFacility"):
-            nome = pk.get("Name", "—")
-            lib  = int(pk.get("Free") or 0)
-            tot  = int(pk.get("Total") or 1)
-            occ  = int((tot - lib) / tot * 100) if tot > 0 else 0
-            parcheggi.append((nome, lib, tot, occ))
-        return parcheggi[:15]  # max 15 per leggibilità
-    except Exception:
+        # Cerca ParkingFacility con qualsiasi namespace
+        for pk in root.iter():
+            if pk.tag.endswith("ParkingFacility"):
+                nome = pk.get("Name", "—")
+                lib  = int(pk.get("Free") or 0)
+                tot  = int(pk.get("Total") or 1)
+                occ  = int((tot - lib) / tot * 100) if tot > 0 else 0
+                parcheggi.append((nome, lib, tot, occ))
+        return parcheggi[:15]
+    except Exception as e:
+        print(f"Errore fetch_torino: {e}")
         return []
 
 def fetch_firenze():
@@ -255,7 +257,24 @@ def run_polling():
 
 if __name__ == "__main__":
     import sys
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ParkPulse Bot OK")
+        def log_message(self, *args):
+            pass  # Silenzia i log HTTP
+
     if len(sys.argv) > 1 and sys.argv[1] == "broadcast":
         broadcast_morning()
     else:
+        # Avvia server HTTP su porta 10000 per Render
+        port = int(os.environ.get("PORT", 10000))
+        server = HTTPServer(("0.0.0.0", port), HealthHandler)
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+        print(f"Health server attivo su porta {port}")
         run_polling()
