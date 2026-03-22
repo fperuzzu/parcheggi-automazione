@@ -43,20 +43,20 @@
       --orange: #ff8c00;
       --orange-bright: #ffaa33;
       --orange-bg: rgba(255,140,0,0.1);
-      --orange-border: rgba(255,140,0,0.2);
-      --bg: #07070f;
-      --bg2: #0c0c1a;
-      --bg3: #111122;
-      --border: #1c1c30;
-      --text: #f0ede8;
-      --sub: #8888aa;
-      --muted: #55556a;
-      --green: #00d68f;
-      --green-bg: rgba(0,214,143,0.08);
-      --green-border: rgba(0,214,143,0.2);
+      --orange-border: rgba(255,140,0,0.25);
+      --bg: #09090f;
+      --bg2: #0f0f1c;
+      --bg3: #15152a;
+      --border: #22223a;
+      --text: #ffffff;
+      --sub: #b0b0c8;
+      --muted: #7070a0;
+      --green: #00e89a;
+      --green-bg: rgba(0,232,154,0.1);
+      --green-border: rgba(0,232,154,0.25);
       --shadow: 0 2px 20px rgba(0,0,0,0.4);
       --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-      --nav-bg: rgba(7,7,15,0.92);
+      --nav-bg: rgba(9,9,15,0.95);
     }
 
     /* ── RESET ── */
@@ -297,6 +297,53 @@
     .footer-copy { color: var(--muted); font-size: 0.72rem; }
 
     /* ── RESPONSIVE ── */
+    /* Dark mode card overrides */
+    [data-theme="dark"] .prob-card,
+    [data-theme="dark"] .step,
+    [data-theme="dark"] .city-card,
+    [data-theme="dark"] .tg-box,
+    [data-theme="dark"] .media-box {
+      background: var(--bg2);
+      border-color: var(--border);
+    }
+    [data-theme="dark"] .mf-item,
+    [data-theme="dark"] .contact-box,
+    [data-theme="dark"] .ph-kpi,
+    [data-theme="dark"] .phone,
+    [data-theme="dark"] .phone-screen {
+      background: var(--bg3);
+    }
+    /* CTA sempre visibile in dark */
+    [data-theme="dark"] .cta-main {
+      background: var(--orange);
+      color: #000;
+      box-shadow: 0 4px 24px rgba(255,140,0,0.4);
+    }
+    [data-theme="dark"] .cta-main:hover {
+      background: var(--orange-bright);
+      box-shadow: 0 8px 36px rgba(255,140,0,0.55);
+    }
+    [data-theme="dark"] .nav-btn {
+      background: var(--orange);
+      color: #000;
+    }
+    [data-theme="dark"] .tg-btn {
+      box-shadow: 0 4px 20px rgba(34,158,217,0.3);
+    }
+    /* Testo sub piu' leggibile in dark */
+    [data-theme="dark"] .hero-sub,
+    [data-theme="dark"] .prob-desc,
+    [data-theme="dark"] .step p,
+    [data-theme="dark"] .mockup-text p,
+    [data-theme="dark"] .feat-item,
+    [data-theme="dark"] .tg-box p,
+    [data-theme="dark"] .media-box p,
+    [data-theme="dark"] .mf-desc,
+    [data-theme="dark"] .tl-text,
+    [data-theme="dark"] .city-meta {
+      color: #b0b0c8;
+    }
+
     @media (max-width: 700px) {
       nav { padding: 0 1rem; }
       .nav-link { display: none; }
@@ -485,7 +532,7 @@
         </div>
         <div class="contact-box">
           <p>Per informazioni, interviste o collaborazioni:</p>
-          <a href="mailto:info@parkpulse.it" class="contact-email">info@parkpulse.it</a>
+          <a href="/cdn-cgi/l/email-protection#325b5c545d724253405942475e41571c5b46" class="contact-email"><span class="__cf_email__" data-cfemail="563f383039162637243d26233a2533783f22">[email&#160;protected]</span></a>
         </div>
       </div>
       <div>
@@ -509,14 +556,14 @@
       <a href="https://parkpulse.it/torino">Torino</a>
       <a href="https://parkpulse.it/firenze">Firenze</a>
       <a href="https://t.me/parkpulse_it_bot">Telegram</a>
-      <a href="mailto:info@parkpulse.it">info@parkpulse.it</a>
+      <a href="/cdn-cgi/l/email-protection#d5bcbbb3ba95a5b4a7bea5a0b9a6b0fbbca1"><span class="__cf_email__" data-cfemail="274e494148675746554c57524b5442094e53">[email&#160;protected]</span></a>
       <a href="https://paypal.me/parkpulse/3EUR">Sostieni</a>
     </div>
     <div class="footer-copy">2026 ParkPulse - Dati da API ufficiali comunali</div>
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   // Theme toggle
   const toggle = document.getElementById('themeToggle');
   const html = document.documentElement;
@@ -526,18 +573,4 @@
 
   toggle.addEventListener('click', () => {
     const current = html.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', next);
-    localStorage.setItem('pp-theme', next);
-    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
-  });
-
-  // Service worker
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    });
-  }
-</script>
-</body>
-</html>
+    const next = current === 'dark' ? 'light' : 
