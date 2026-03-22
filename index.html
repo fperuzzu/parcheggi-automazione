@@ -49,8 +49,8 @@
       --bg3: #15152a;
       --border: #22223a;
       --text: #ffffff;
-      --sub: #b0b0c8;
-      --muted: #7070a0;
+      --sub: #c0c0d8;
+      --muted: #9090b8;
       --green: #00e89a;
       --green-bg: rgba(0,232,154,0.1);
       --green-border: rgba(0,232,154,0.25);
@@ -103,7 +103,7 @@
     /* Theme toggle */
     .theme-toggle {
       background: var(--bg3); border: 1px solid var(--border);
-      color: var(--sub); cursor: pointer;
+      color: var(--text); cursor: pointer;
       width: 34px; height: 34px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1rem; transition: background 0.2s, border-color 0.2s;
@@ -315,20 +315,23 @@
     }
     /* CTA sempre visibile in dark */
     [data-theme="dark"] .cta-main {
-      background: var(--orange);
+      background: var(--orange-bright);
       color: #000;
-      box-shadow: 0 4px 24px rgba(255,140,0,0.4);
+      font-weight: 800;
+      box-shadow: 0 4px 28px rgba(255,140,0,0.55), 0 0 0 2px rgba(255,140,0,0.15);
     }
     [data-theme="dark"] .cta-main:hover {
-      background: var(--orange-bright);
-      box-shadow: 0 8px 36px rgba(255,140,0,0.55);
+      background: #ffbb44;
+      box-shadow: 0 8px 40px rgba(255,140,0,0.7), 0 0 0 3px rgba(255,140,0,0.2);
     }
     [data-theme="dark"] .nav-btn {
-      background: var(--orange);
+      background: var(--orange-bright);
       color: #000;
+      box-shadow: 0 2px 12px rgba(255,140,0,0.35);
     }
     [data-theme="dark"] .tg-btn {
-      box-shadow: 0 4px 20px rgba(34,158,217,0.3);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(34,158,217,0.45);
     }
     /* Testo sub piu' leggibile in dark */
     [data-theme="dark"] .hero-sub,
@@ -341,7 +344,7 @@
     [data-theme="dark"] .mf-desc,
     [data-theme="dark"] .tl-text,
     [data-theme="dark"] .city-meta {
-      color: #b0b0c8;
+      color: #c0c0d8;
     }
 
     @media (max-width: 700px) {
