@@ -4,342 +4,453 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkPulse - Trova Parcheggio Libero in Tempo Reale | Bologna, Torino, Firenze</title>
-  <meta name="description" content="Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze. Dati aggiornati ogni 15 minuti da fonti ufficiali comunali. Gratuito, senza registrazione.">
+  <meta name="description" content="Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze. 270.000+ misurazioni registrate. Dati ufficiali ogni 15 minuti. Gratuito.">
   <meta property="og:title" content="ParkPulse - Parcheggi in Tempo Reale">
-  <meta property="og:description" content="45 parcheggi monitorati. Dati ogni 15 minuti. Gratuito.">
+  <meta property="og:description" content="270.000+ misurazioni. 45 parcheggi. 3 citta'. Gratuito.">
   <meta property="og:url" content="https://parkpulse.it/">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#ff8c00">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H5D1JNW6R1"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-H5D1JNW6R1');
-  </script>
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "ParkPulse",
-    "url": "https://parkpulse.it",
-    "description": "Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze.",
-    "applicationCategory": "TravelApplication",
-    "operatingSystem": "Web",
-    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
-    "aggregateRating": {"@type": "AggregateRating", "ratingValue": "4.8", "reviewCount": "12"}
-  }
-  </script>
-
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-H5D1JNW6R1');</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ParkPulse","url":"https://parkpulse.it","description":"Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze.","applicationCategory":"TravelApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.8","reviewCount":"12"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
       --orange: #ff8c00;
-      --orange-dim: rgba(255,140,0,0.12);
-      --bg: #080810;
-      --bg2: #0d0d1a;
-      --border: #1a1a2e;
-      --text: #e8e6e0;
-      --muted: #666;
-      --green: #2ecc71;
+      --orange-glow: rgba(255,140,0,0.15);
+      --bg: #07070f;
+      --bg2: #0c0c1a;
+      --bg3: #111122;
+      --border: #1c1c30;
+      --text: #f0ede8;
+      --sub: #888;
+      --green: #00d68f;
     }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; line-height: 1.6; overflow-x: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow-x: hidden; }
 
+    /* NAV */
     nav {
-      position: fixed; top: 0; left: 0; right: 0;
-      background: rgba(8,8,16,0.92); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem; height: 60px;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       display: flex; align-items: center; justify-content: space-between;
-      z-index: 100;
+      padding: 0 2.5rem; height: 64px;
+      background: rgba(7,7,15,0.85); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
     }
-    .nav-logo { font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 500; color: var(--orange); text-decoration: none; letter-spacing: 0.05em; }
-    .nav-links { display: flex; gap: 0.5rem; align-items: center; }
-    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; padding: 6px 12px; border-radius: 3px; transition: color 0.2s; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-cta { background: var(--orange) !important; color: #000 !important; font-weight: 600 !important; }
-    .nav-cta:hover { background: #ffaa33 !important; color: #000 !important; }
+    .logo { font-family: 'DM Mono', monospace; font-size: 1rem; color: var(--orange); text-decoration: none; letter-spacing: 0.06em; font-weight: 500; }
+    .nav-right { display: flex; align-items: center; gap: 0.25rem; }
+    .nav-link { color: var(--sub); text-decoration: none; font-size: 0.82rem; padding: 7px 14px; border-radius: 6px; transition: color 0.2s; font-weight: 500; }
+    .nav-link:hover { color: var(--text); }
+    .nav-btn { background: var(--orange); color: #000; font-size: 0.82rem; font-weight: 700; padding: 9px 20px; border-radius: 6px; text-decoration: none; letter-spacing: 0.02em; transition: background 0.2s, transform 0.15s; }
+    .nav-btn:hover { background: #ffaa33; transform: translateY(-1px); }
 
+    /* HERO */
     .hero {
       min-height: 100vh; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      text-align: center; padding: 100px 2rem 4rem;
-      position: relative; overflow: hidden;
+      text-align: center; padding: 120px 2rem 6rem;
+      position: relative;
     }
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,140,0,0.08) 0%, transparent 70%);
+    .hero-glow {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 500px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(255,140,0,0.12) 0%, transparent 65%);
       pointer-events: none;
     }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--orange-dim); border: 1px solid rgba(255,140,0,0.25);
-      color: var(--orange); padding: 5px 14px; border-radius: 100px;
-      font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em;
-      margin-bottom: 2rem; animation: fadeUp 0.6s ease both;
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(255,140,0,0.3);
+      background: rgba(255,140,0,0.08);
+      color: var(--orange); padding: 6px 16px; border-radius: 100px;
+      font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.5s ease both;
     }
-    .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
-    h1 { font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; max-width: 800px; animation: fadeUp 0.6s 0.1s ease both; }
-    h1 span { color: var(--orange); }
-    .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 540px; margin: 1.5rem auto 1rem; animation: fadeUp 0.6s 0.2s ease both; }
-    .hero-fact {
-      margin: 1rem auto 1.5rem; padding: 12px 20px;
-      background: rgba(255,140,0,0.06); border: 1px solid rgba(255,140,0,0.15);
-      border-radius: 6px; font-size: 0.82rem; color: #aaa;
-      max-width: 560px; animation: fadeUp 0.6s 0.25s ease both;
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: blink 1.8s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800; line-height: 1.05;
+      letter-spacing: -0.03em;
+      max-width: 820px;
+      animation: fadeUp 0.5s 0.08s ease both;
     }
-    .hero-fact strong { color: var(--orange); }
-    .hero-ctas { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; animation: fadeUp 0.6s 0.3s ease both; }
+    .hero-title .accent { color: var(--orange); }
 
-    .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: #000; padding: 14px 28px; border-radius: 4px; text-decoration: none; font-weight: 700; font-size: 0.95rem; transition: background 0.2s, transform 0.15s; }
-    .btn-primary:hover { background: #ffaa33; transform: translateY(-1px); }
-    .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); border: 1px solid var(--border); padding: 14px 28px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: border-color 0.2s, transform 0.15s; }
-    .btn-secondary:hover { border-color: #444; transform: translateY(-1px); }
+    .hero-sub {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--sub); max-width: 500px;
+      margin: 2rem auto 0;
+      line-height: 1.7; font-weight: 400;
+      animation: fadeUp 0.5s 0.16s ease both;
+    }
 
-    .stats { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 4rem; width: 100%; max-width: 780px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.6s 0.4s ease both; }
-    .stat { flex: 1; min-width: 140px; padding: 1.5rem 1rem; text-align: center; border-right: 1px solid var(--border); background: var(--bg2); }
-    .stat:last-child { border-right: none; }
-    .stat-num { font-family: 'DM Mono', monospace; font-size: 1.6rem; font-weight: 500; color: var(--orange); }
-    .stat-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; text-transform: uppercase; }
+    /* MAIN CTA */
+    .hero-cta-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 1rem; margin-top: 3rem;
+      animation: fadeUp 0.5s 0.24s ease both;
+    }
+    .cta-main {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--orange); color: #000;
+      font-weight: 700; font-size: 1.1rem;
+      padding: 18px 40px; border-radius: 8px;
+      text-decoration: none; letter-spacing: 0.01em;
+      box-shadow: 0 0 40px rgba(255,140,0,0.35);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    }
+    .cta-main:hover { background: #ffaa33; box-shadow: 0 0 60px rgba(255,140,0,0.5); transform: translateY(-2px); }
+    .cta-arrow { font-size: 1.2rem; transition: transform 0.2s; }
+    .cta-main:hover .cta-arrow { transform: translateX(4px); }
+    .cta-sec {
+      color: var(--sub); font-size: 0.82rem; text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.2s;
+    }
+    .cta-sec:hover { color: var(--text); }
 
-    section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
-    .section-tag { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--orange); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1rem; }
-    h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; margin-bottom: 1rem; }
-    .section-sub { color: var(--muted); font-size: 1rem; max-width: 520px; }
+    /* STATS STRIP */
+    .stats-strip {
+      display: flex; justify-content: center; flex-wrap: wrap;
+      gap: 0; margin-top: 5rem; width: 100%; max-width: 760px;
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      animation: fadeUp 0.5s 0.32s ease both;
+    }
+    .stat-item { flex: 1; min-width: 150px; padding: 1.75rem 1rem; text-align: center; background: var(--bg2); border-right: 1px solid var(--border); }
+    .stat-item:last-child { border-right: none; }
+    .stat-val { font-family: 'DM Mono', monospace; font-size: 1.7rem; color: var(--orange); font-weight: 500; }
+    .stat-lbl { font-size: 0.68rem; color: var(--sub); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 5px; }
 
-    .city-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
-    .city-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; text-decoration: none; color: var(--text); transition: border-color 0.2s, transform 0.15s; display: block; }
-    .city-card:hover { border-color: rgba(255,140,0,0.4); transform: translateY(-2px); }
-    .city-emoji { font-size: 2rem; margin-bottom: 0.75rem; }
-    .city-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; }
-    .city-meta { font-size: 0.78rem; color: var(--muted); }
-    .city-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1rem; }
-    .pill { font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 3px 10px; border-radius: 100px; letter-spacing: 0.06em; }
-    .pill-green { background: rgba(46,204,113,0.1); color: var(--green); border: 1px solid rgba(46,204,113,0.2); }
-    .pill-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,140,0,0.2); }
+    /* MOCKUP SECTION */
+    .mockup-section { padding: 8rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .mockup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .mockup-text .tag { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--orange); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1rem; }
+    .mockup-text h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1.25rem; }
+    .mockup-text p { color: var(--sub); font-size: 1rem; line-height: 1.75; margin-bottom: 2rem; }
+    .feature-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .feature-item { display: flex; align-items: flex-start; gap: 12px; font-size: 0.88rem; color: var(--sub); line-height: 1.5; }
+    .feature-icon { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,140,0,0.12); border: 1px solid rgba(255,140,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; margin-top: 1px; color: var(--orange); }
 
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem; margin-top: 3rem; }
-    .step { padding: 1.5rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
-    .step-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--orange); letter-spacing: 0.1em; margin-bottom: 0.75rem; }
-    .step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .step p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    /* Phone mockup */
+    .phone-wrap { display: flex; justify-content: center; align-items: center; }
+    .phone {
+      width: 240px; background: #0d0d1a;
+      border: 2px solid var(--border); border-radius: 32px;
+      padding: 16px 12px; box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,140,0,0.08);
+      position: relative;
+    }
+    .phone-notch { width: 60px; height: 6px; background: var(--border); border-radius: 3px; margin: 0 auto 12px; }
+    .phone-screen { background: var(--bg3); border-radius: 20px; padding: 14px; }
+    .phone-header { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--orange); letter-spacing: 0.1em; margin-bottom: 10px; }
+    .phone-city { font-size: 0.75rem; font-weight: 600; margin-bottom: 8px; }
+    .phone-kpi { background: var(--bg2); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .phone-kpi-num { font-family: 'DM Mono', monospace; font-size: 1.1rem; color: var(--orange); }
+    .phone-kpi-lbl { font-size: 0.58rem; color: var(--sub); text-transform: uppercase; }
+    .phone-bar-wrap { margin-bottom: 4px; }
+    .phone-bar-label { font-size: 0.58rem; color: var(--sub); display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .phone-bar { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .phone-bar-fill { height: 100%; border-radius: 3px; }
+    .fill-green { background: var(--green); width: 46%; }
+    .fill-yellow { background: #f39c12; width: 75%; }
+    .fill-red { background: #e74c3c; width: 94%; }
 
-    .telegram-band { background: linear-gradient(135deg, #1a2a3a 0%, #0d1a24 100%); border: 1px solid #1e3a50; border-radius: 8px; padding: 2.5rem 2rem; text-align: center; max-width: 1100px; margin: 0 auto 5rem; }
-    .telegram-band h3 { font-size: 1.4rem; margin-bottom: 0.5rem; }
-    .telegram-band p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .btn-telegram { display: inline-flex; align-items: center; gap: 8px; background: #229ED9; color: #fff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s; }
-    .btn-telegram:hover { background: #1a8abf; }
+    /* CITTA */
+    .cities-section { padding: 6rem 2rem 8rem; max-width: 1100px; margin: 0 auto; }
+    .section-header { margin-bottom: 3.5rem; }
+    .section-header .tag { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--orange); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.75rem; }
+    .section-header h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em; }
+    .city-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .city-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-decoration: none; color: var(--text); transition: border-color 0.25s, transform 0.2s, box-shadow 0.2s; display: block; }
+    .city-card:hover { border-color: rgba(255,140,0,0.5); transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(255,140,0,0.06); }
+    .city-letter { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--orange); opacity: 0.6; margin-bottom: 1rem; line-height: 1; }
+    .city-name { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+    .city-meta { font-size: 0.78rem; color: var(--sub); margin-bottom: 1.25rem; }
+    .city-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag-pill { font-family: 'DM Mono', monospace; font-size: 0.6rem; padding: 4px 10px; border-radius: 100px; letter-spacing: 0.06em; }
+    .tag-green { background: rgba(0,214,143,0.08); color: var(--green); border: 1px solid rgba(0,214,143,0.2); }
+    .tag-orange { background: rgba(255,140,0,0.08); color: var(--orange); border: 1px solid rgba(255,140,0,0.2); }
 
-    .media-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 3rem 2rem; max-width: 1100px; margin: 0 auto 5rem; }
-    .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
-    .media-story { display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; }
-    .story-item { display: flex; align-items: flex-start; gap: 10px; font-size: 0.82rem; color: #aaa; line-height: 1.5; padding: 0.6rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; }
-    .story-icon { flex-shrink: 0; }
-    .media-facts { display: flex; flex-direction: column; gap: 1rem; }
-    .media-fact { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
-    .fact-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
-    .fact-text { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
-    .fact-text strong { color: var(--text); display: block; margin-bottom: 2px; }
-    .media-contact { margin-top: 1.5rem; padding: 1.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
-    .media-contact p { font-size: 0.82rem; color: var(--muted); margin-bottom: 0.75rem; }
-    .media-contact a.email { color: var(--orange); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 0.85rem; }
-    .media-contact a.dashboard-link { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,140,0,0.1); border: 1px solid rgba(255,140,0,0.25); color: var(--orange); padding: 8px 16px; border-radius: 4px; font-size: 0.78rem; text-decoration: none; margin-top: 1rem; }
+    /* MEDIA */
+    .media-section { padding: 6rem 2rem 8rem; max-width: 1100px; margin: 0 auto; }
+    .media-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 3.5rem; }
+    .media-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+    .media-left .tag { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--orange); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1rem; }
+    .media-left h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.6rem, 2.5vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.25rem; line-height: 1.2; }
+    .media-left p { color: var(--sub); font-size: 0.92rem; line-height: 1.75; margin-bottom: 2rem; }
+    .timeline { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
+    .tl-item { display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .tl-item:last-child { border-bottom: none; }
+    .tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex-shrink: 0; margin-top: 6px; }
+    .tl-text { font-size: 0.82rem; color: var(--sub); line-height: 1.5; }
+    .tl-text strong { color: var(--text); }
+    .contact-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+    .contact-box p { font-size: 0.78rem; color: var(--sub); margin-bottom: 0.75rem; }
+    .contact-email { font-family: 'DM Mono', monospace; font-size: 0.9rem; color: var(--orange); text-decoration: none; }
+    .contact-email:hover { text-decoration: underline; }
+    .media-facts { display: flex; flex-direction: column; gap: 1.25rem; }
+    .mf-item { display: flex; gap: 1rem; padding: 1.25rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; }
+    .mf-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,140,0,0.1); border: 1px solid rgba(255,140,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .mf-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 3px; }
+    .mf-desc { font-size: 0.78rem; color: var(--sub); line-height: 1.5; }
 
-    footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--muted); font-size: 0.78rem; }
-    footer a { color: #444; text-decoration: none; }
-    footer a:hover { color: var(--text); }
-    .footer-links { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    /* TELEGRAM */
+    .tg-section { padding: 0 2rem 8rem; max-width: 1100px; margin: 0 auto; }
+    .tg-box { background: linear-gradient(135deg, rgba(34,158,217,0.08) 0%, rgba(13,26,36,0.6) 100%); border: 1px solid rgba(34,158,217,0.2); border-radius: 16px; padding: 4rem 3rem; text-align: center; }
+    .tg-box h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 1rem; }
+    .tg-box p { color: var(--sub); font-size: 1rem; max-width: 480px; margin: 0 auto 2.5rem; line-height: 1.7; }
+    .tg-btn { display: inline-flex; align-items: center; gap: 10px; background: #229ED9; color: #fff; font-weight: 700; font-size: 1rem; padding: 16px 36px; border-radius: 8px; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .tg-btn:hover { background: #1a8abf; transform: translateY(-2px); }
 
-    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 3rem 2rem; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; }
+    .footer-logo { font-family: 'DM Mono', monospace; font-size: 0.9rem; color: var(--orange); }
+    .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--sub); text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { color: #333; font-size: 0.75rem; }
 
-    @media (max-width: 768px) {
-      .nav-links a:not(.nav-cta) { display: none; }
-      .media-grid { grid-template-columns: 1fr; gap: 2rem; }
-      .stat { min-width: 120px; padding: 1.2rem 0.75rem; }
-      .stat-num { font-size: 1.3rem; }
-      .telegram-band, .media-section { margin-left: 1rem; margin-right: 1rem; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+    @media (max-width: 900px) {
+      .nav-link { display: none; }
+      .mockup-grid { grid-template-columns: 1fr; }
+      .phone-wrap { display: none; }
+      .city-grid { grid-template-columns: 1fr; }
+      .media-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+      .media-box { padding: 2rem; }
+      .tg-box { padding: 2.5rem 1.5rem; }
+      .footer-inner { flex-direction: column; text-align: center; }
     }
   </style>
 </head>
 <body>
 
-  <nav>
-    <a href="https://parkpulse.it" class="nav-logo">P ParkPulse</a>
-    <div class="nav-links">
-      <a href="https://parkpulse.it/bologna">Bologna</a>
-      <a href="https://parkpulse.it/torino">Torino</a>
-      <a href="https://parkpulse.it/firenze">Firenze</a>
-      <a href="#media">Per i media</a>
-      <a href="https://parcheggi-automazione.streamlit.app" class="nav-cta">Apri Dashboard</a>
-    </div>
-  </nav>
+<nav>
+  <a href="https://parkpulse.it" class="logo">PP ParkPulse</a>
+  <div class="nav-right">
+    <a href="https://parkpulse.it/bologna" class="nav-link">Bologna</a>
+    <a href="https://parkpulse.it/torino" class="nav-link">Torino</a>
+    <a href="https://parkpulse.it/firenze" class="nav-link">Firenze</a>
+    <a href="#media" class="nav-link">Media</a>
+    <a href="https://parcheggi-automazione.streamlit.app" class="nav-btn">Apri Dashboard</a>
+  </div>
+</nav>
 
-  <div class="hero">
-    <div class="hero-badge">
-      <div class="pulse"></div>
-      LIVE - AGGIORNATO ORA
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="live-badge"><div class="dot"></div> LIVE - AGGIORNATO ORA</div>
+  <h1 class="hero-title">
+    Sapere dove parcheggiare<br><span class="accent">prima di partire.</span>
+  </h1>
+  <p class="hero-sub">
+    270.000+ misurazioni reali su 45 parcheggi a Bologna, Torino e Firenze.
+    Dati ufficiali ogni 15 minuti. Completamente gratuito.
+  </p>
+  <div class="hero-cta-wrap">
+    <a href="https://parcheggi-automazione.streamlit.app" class="cta-main">
+      Vedi i posti liberi ora <span class="cta-arrow">&#8594;</span>
+    </a>
+    <a href="#come-funziona" class="cta-sec">
+      Come funziona &#8595;
+    </a>
+  </div>
+  <div class="stats-strip">
+    <div class="stat-item"><div class="stat-val">270.000+</div><div class="stat-lbl">Misurazioni registrate</div></div>
+    <div class="stat-item"><div class="stat-val">45+</div><div class="stat-lbl">Parcheggi monitorati</div></div>
+    <div class="stat-item"><div class="stat-val">15 min</div><div class="stat-lbl">Frequenza aggiornamento</div></div>
+    <div class="stat-item"><div class="stat-val">100%</div><div class="stat-lbl">Dati ufficiali</div></div>
+  </div>
+</section>
+
+<!-- MOCKUP -->
+<div id="come-funziona" class="mockup-section">
+  <div class="mockup-grid">
+    <div class="mockup-text">
+      <div class="tag">Come funziona</div>
+      <h2>Il radar dei parcheggi italiani</h2>
+      <p>Le app esistenti mostrano dove pagare, non dove c'e' posto. ParkPulse si connette direttamente alle API ufficiali dei Comuni e mostra la disponibilita' in tempo reale.</p>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">&#10003;</div>
+          Disponibilita' in tempo reale con aggiornamento ogni 15 minuti
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">&#10003;</div>
+          Storico occupazione: scopri gli orari migliori per trovare posto
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">&#10003;</div>
+          Navigazione integrata verso Google Maps e Waze
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">&#10003;</div>
+          Nessuna registrazione, nessun abbonamento, gratuito
+        </div>
+      </div>
     </div>
-    <h1>Trova parcheggio libero<br><span>in tempo reale</span></h1>
-    <p class="hero-sub">
-      ParkPulse monitora 45+ parcheggi a Bologna, Torino e Firenze.
-      Dati ufficiali aggiornati ogni 15 minuti. Gratuito, senza registrazione.
-    </p>
-    <div class="hero-fact">
-      Il <strong>30% del traffico urbano</strong> e' ricerca parcheggio. ParkPulse ha registrato <strong>270.000+ misurazioni</strong> in 3 settimane su 45 parcheggi italiani.
-    </div>
-    <div class="hero-ctas">
-      <a href="https://parcheggi-automazione.streamlit.app" class="btn-primary">Apri Dashboard Live</a>
-      <a href="https://t.me/parkpulse_it_bot" class="btn-secondary">Bot Telegram</a>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="stat-num">45+</div><div class="stat-label">Parcheggi monitorati</div></div>
-      <div class="stat"><div class="stat-num">15 min</div><div class="stat-label">Aggiornamento</div></div>
-      <div class="stat"><div class="stat-num">270.000+</div><div class="stat-label">Rilevazioni registrate</div></div>
-      <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Dati ufficiali</div></div>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-header">PP PARKPULSE - LIVE</div>
+          <div class="phone-city">Bologna - ore 14:30</div>
+          <div class="phone-kpi">
+            <div><div class="phone-kpi-num">312</div><div class="phone-kpi-lbl">posti liberi</div></div>
+            <div style="text-align:right"><div class="phone-kpi-num" style="color:#00d68f">67%</div><div class="phone-kpi-lbl">disponibile</div></div>
+          </div>
+          <div style="margin-top:10px;font-size:0.6rem;color:#555;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Dettaglio parcheggi</div>
+          <div class="phone-bar-wrap">
+            <div class="phone-bar-label"><span>Autostazione</span><span style="color:#00d68f">54%</span></div>
+            <div class="phone-bar"><div class="phone-bar-fill fill-green"></div></div>
+          </div>
+          <div class="phone-bar-wrap" style="margin-top:5px">
+            <div class="phone-bar-label"><span>Riva Reno</span><span style="color:#f39c12">75%</span></div>
+            <div class="phone-bar"><div class="phone-bar-fill fill-yellow"></div></div>
+          </div>
+          <div class="phone-bar-wrap" style="margin-top:5px">
+            <div class="phone-bar-label"><span>VIII Agosto</span><span style="color:#e74c3c">94%</span></div>
+            <div class="phone-bar"><div class="phone-bar-fill fill-red"></div></div>
+          </div>
+          <div style="margin-top:12px;background:#ff8c00;color:#000;text-align:center;padding:7px;border-radius:6px;font-size:0.65rem;font-weight:700">Naviga verso Autostazione</div>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <section>
-    <div class="section-tag">Copertura</div>
-    <h2>Tre citta', un'unica dashboard</h2>
-    <p class="section-sub">Seleziona la tua citta' e vedi in tempo reale quali parcheggi hanno posti disponibili.</p>
-    <div class="city-grid">
-      <a href="https://parkpulse.it/bologna" class="city-card">
-        <div class="city-emoji">B</div>
-        <div class="city-name">Bologna</div>
-        <div class="city-meta">8 parcheggi - ~3.500 posti totali</div>
-        <div class="city-pills">
-          <span class="pill pill-orange">Centro storico</span>
-          <span class="pill pill-green">API ufficiali</span>
-        </div>
-      </a>
-      <a href="https://parkpulse.it/torino" class="city-card">
-        <div class="city-emoji">T</div>
-        <div class="city-name">Torino</div>
-        <div class="city-meta">16 parcheggi - ~8.000 posti totali</div>
-        <div class="city-pills">
-          <span class="pill pill-orange">5T Torino</span>
-          <span class="pill pill-green">API ufficiali</span>
-        </div>
-      </a>
-      <a href="https://parkpulse.it/firenze" class="city-card">
-        <div class="city-emoji">F</div>
-        <div class="city-name">Firenze</div>
-        <div class="city-meta">13 parcheggi - ~6.800 posti totali</div>
-        <div class="city-pills">
-          <span class="pill pill-orange">Firenze Parcheggi</span>
-          <span class="pill pill-green">API ufficiali</span>
-        </div>
-      </a>
-    </div>
-  </section>
+<!-- CITTA -->
+<div class="cities-section">
+  <div class="section-header">
+    <div class="tag">Copertura</div>
+    <h2>Tre citta', dati ufficiali</h2>
+  </div>
+  <div class="city-grid">
+    <a href="https://parkpulse.it/bologna" class="city-card">
+      <div class="city-letter">B</div>
+      <div class="city-name">Bologna</div>
+      <div class="city-meta">8 parcheggi - ~3.500 posti totali</div>
+      <div class="city-tags">
+        <span class="tag-pill tag-green">API Comune</span>
+        <span class="tag-pill tag-orange">Centro storico</span>
+      </div>
+    </a>
+    <a href="https://parkpulse.it/torino" class="city-card">
+      <div class="city-letter">T</div>
+      <div class="city-name">Torino</div>
+      <div class="city-meta">16 parcheggi - ~8.000 posti totali</div>
+      <div class="city-tags">
+        <span class="tag-pill tag-green">5T Torino</span>
+        <span class="tag-pill tag-orange">Centro</span>
+      </div>
+    </a>
+    <a href="https://parkpulse.it/firenze" class="city-card">
+      <div class="city-letter">F</div>
+      <div class="city-name">Firenze</div>
+      <div class="city-meta">13 parcheggi - ~6.800 posti totali</div>
+      <div class="city-tags">
+        <span class="tag-pill tag-green">Firenze Parcheggi</span>
+        <span class="tag-pill tag-orange">Patrimonio UNESCO</span>
+      </div>
+    </a>
+  </div>
+</div>
 
-  <section>
-    <div class="section-tag">Come funziona</div>
-    <h2>Semplice e immediato</h2>
-    <p class="section-sub">Nessuna registrazione, nessuna app da scaricare. Solo dati in tempo reale.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01 - DATI</div>
-        <h3>Fonti ufficiali</h3>
-        <p>ParkPulse si connette alle API ufficiali dei Comuni di Bologna, Torino e Firenze ogni 15 minuti.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">02 - ANALISI</div>
-        <h3>Storico e orari migliori</h3>
-        <p>I dati storici mostrano quando e' piu' facile trovare parcheggio, informazione unica nel panorama italiano.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">03 - NAVIGA</div>
-        <h3>Un click per partire</h3>
-        <p>Ogni parcheggio ha un bottone diretto a Google Maps e Waze per raggiungere subito il posto libero.</p>
-      </div>
-    </div>
-  </section>
+<!-- TELEGRAM -->
+<div class="tg-section">
+  <div class="tg-box">
+    <h2>Aggiornamento mattutino automatico</h2>
+    <p>Ricevi ogni mattina alle 8:00 lo snapshot dei parcheggi della tua citta' direttamente su Telegram. Zero configurazione, gratuito.</p>
+    <a href="https://t.me/parkpulse_it_bot" class="tg-btn">Iscriviti al Bot Telegram</a>
+  </div>
+</div>
 
-  <div style="padding: 0 2rem;">
-    <div class="telegram-band">
-      <h3>Aggiornamento mattutino automatico</h3>
-      <p>Ricevi ogni mattina alle 8:00 lo snapshot della tua citta' direttamente su Telegram. Gratuito.</p>
-      <a href="https://t.me/parkpulse_it_bot" class="btn-telegram">Iscriviti al Bot Telegram</a>
+<!-- MEDIA -->
+<div id="media" class="media-section">
+  <div class="media-box">
+    <div class="media-inner">
+      <div class="media-left">
+        <div class="tag">Per i media</div>
+        <h2>Una storia da raccontare</h2>
+        <p>Nasce a marzo 2026 da un problema concreto: le app di parcheggio italiane mostrano dove pagare, non dove c'e' posto. ParkPulse connette le API ufficiali dei Comuni e le rende leggibili a chiunque.</p>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-text"><strong>Marzo 2026</strong> - Lancio del progetto indipendente</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-text"><strong>270.000+</strong> misurazioni registrate in 3 settimane</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-text"><strong>45 parcheggi</strong> monitorati in 3 citta' italiane</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-text"><strong>Obiettivo</strong>: ridurre il 30% del traffico da ricerca parcheggio</div>
+          </div>
+        </div>
+        <div class="contact-box">
+          <p>Per informazioni, interviste o collaborazioni:</p>
+          <a href="mailto:info@parkpulse.it" class="contact-email">info@parkpulse.it</a>
+        </div>
+      </div>
+      <div>
+        <div class="media-facts">
+          <div class="mf-item">
+            <div class="mf-icon">📡</div>
+            <div><div class="mf-title">Dati ufficiali comunali</div><div class="mf-desc">API dirette da Bologna, Torino e Firenze - nessun dato sintetico o stimato.</div></div>
+          </div>
+          <div class="mf-item">
+            <div class="mf-icon">🕒</div>
+            <div><div class="mf-title">Storico unico in Italia</div><div class="mf-desc">ParkPulse e' l'unico servizio che mostra gli orari migliori per trovare parcheggio nelle citta' italiane.</div></div>
+          </div>
+          <div class="mf-item">
+            <div class="mf-icon">🆓</div>
+            <div><div class="mf-title">Completamente gratuito</div><div class="mf-desc">Nessuna registrazione, nessun abbonamento. Progetto indipendente.</div></div>
+          </div>
+          <div class="mf-item">
+            <div class="mf-icon">🤖</div>
+            <div><div class="mf-title">Bot Telegram attivo</div><div class="mf-desc">Aggiornamenti mattutini automatici sulla disponibilita' della propria citta'.</div></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <section id="media" style="padding-top: 3rem;">
-    <div class="media-section">
-      <div class="media-grid">
-        <div>
-          <div class="section-tag">Per i media</div>
-          <h2>Una storia da raccontare</h2>
-          <p class="section-sub">
-            Nasce a marzo 2026 da un problema concreto: le app di parcheggio italiane mostrano dove pagare, non dove c'e' posto.
-            ParkPulse collega direttamente le API ufficiali dei Comuni e le rende leggibili a chiunque, gratuitamente.
-          </p>
-          <div class="media-story">
-            <div class="story-item"><span class="story-icon">Lanciato a marzo 2026 come progetto indipendente</span></div>
-            <div class="story-item"><span class="story-icon">Dati da API ufficiali di Bologna, Torino e Firenze</span></div>
-            <div class="story-item"><span class="story-icon">Oltre 270.000 rilevazioni registrate dal lancio</span></div>
-            <div class="story-item"><span class="story-icon">Obiettivo: ridurre il traffico da ricerca parcheggio nelle citta' italiane</span></div>
-          </div>
-          <div class="media-contact">
-            <p>Per informazioni, interviste o collaborazioni:</p>
-            <a href="/cdn-cgi/l/email-protection#7910171f163909180b12090c150a1c57100d" class="email"><span class="__cf_email__" data-cfemail="01686f676e417160736a71746d72642f6875">[email&#160;protected]</span></a>
-            <br>
-            <a href="https://parcheggi-automazione.streamlit.app" class="dashboard-link">Apri la dashboard live</a>
-          </div>
-        </div>
-        <div>
-          <div class="media-facts">
-            <div class="media-fact">
-              <div class="fact-icon">📡</div>
-              <div class="fact-text">
-                <strong>Dati da API ufficiali comunali</strong>
-                Bologna, Torino e Firenze trasmettono dati in tempo reale. ParkPulse li aggrega e li rende accessibili gratuitamente.
-              </div>
-            </div>
-            <div class="media-fact">
-              <div class="fact-icon">🕒</div>
-              <div class="fact-text">
-                <strong>Storico delle occupazioni</strong>
-                ParkPulse registra ogni rilevazione e mostra gli orari con piu' disponibilita', funzione unica nel panorama italiano.
-              </div>
-            </div>
-            <div class="media-fact">
-              <div class="fact-icon">🆓</div>
-              <div class="fact-text">
-                <strong>Completamente gratuito</strong>
-                Nessuna registrazione, nessun abbonamento. Progetto indipendente sostenuto dalla community.
-              </div>
-            </div>
-            <div class="media-fact">
-              <div class="fact-icon">🤖</div>
-              <div class="fact-text">
-                <strong>Bot Telegram attivo</strong>
-                Gli utenti ricevono aggiornamenti mattutini automatici sulla disponibilita' della propria citta'.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <footer>
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">PP ParkPulse</div>
     <div class="footer-links">
       <a href="https://parkpulse.it/bologna">Bologna</a>
       <a href="https://parkpulse.it/torino">Torino</a>
       <a href="https://parkpulse.it/firenze">Firenze</a>
       <a href="https://t.me/parkpulse_it_bot">Telegram</a>
-      <a href="/cdn-cgi/l/email-protection#3d54535b527d4d5c4f564d48514e58135449"><span class="__cf_email__" data-cfemail="9bf2f5fdf4dbebfae9f0ebeef7e8feb5f2ef">[email&#160;protected]</span></a>
+      <a href="mailto:info@parkpulse.it">info@parkpulse.it</a>
       <a href="https://paypal.me/parkpulse/3EUR">Sostieni</a>
     </div>
-    <div>2026 ParkPulse 
+    <div class="footer-copy">2026 ParkPulse - Dati da API ufficiali comunali</div>
+  </div>
+</footer>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
