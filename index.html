@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ParkPulse — Trova Parcheggio Libero in Tempo Reale | Bologna, Torino, Firenze</title>
+  <title>ParkPulse - Trova Parcheggio Libero in Tempo Reale | Bologna, Torino, Firenze</title>
   <meta name="description" content="Trova posti auto liberi in tempo reale a Bologna, Torino e Firenze. Dati aggiornati ogni 15 minuti da fonti ufficiali comunali. Gratuito, senza registrazione.">
-  <meta property="og:title" content="ParkPulse — Parcheggi in Tempo Reale">
+  <meta property="og:title" content="ParkPulse - Parcheggi in Tempo Reale">
   <meta property="og:description" content="45 parcheggi monitorati. Dati ogni 15 minuti. Gratuito.">
   <meta property="og:url" content="https://parkpulse.it/">
   <meta property="og:type" content="website">
@@ -90,7 +90,14 @@
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
     h1 { font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; max-width: 800px; animation: fadeUp 0.6s 0.1s ease both; }
     h1 span { color: var(--orange); }
-    .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 540px; margin: 1.5rem auto 2.5rem; animation: fadeUp 0.6s 0.2s ease both; }
+    .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 540px; margin: 1.5rem auto 1rem; animation: fadeUp 0.6s 0.2s ease both; }
+    .hero-fact {
+      margin: 1rem auto 1.5rem; padding: 12px 20px;
+      background: rgba(255,140,0,0.06); border: 1px solid rgba(255,140,0,0.15);
+      border-radius: 6px; font-size: 0.82rem; color: #aaa;
+      max-width: 560px; animation: fadeUp 0.6s 0.25s ease both;
+    }
+    .hero-fact strong { color: var(--orange); }
     .hero-ctas { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; animation: fadeUp 0.6s 0.3s ease both; }
 
     .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: #000; padding: 14px 28px; border-radius: 4px; text-decoration: none; font-weight: 700; font-size: 0.95rem; transition: background 0.2s, transform 0.15s; }
@@ -98,11 +105,11 @@
     .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); border: 1px solid var(--border); padding: 14px 28px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: border-color 0.2s, transform 0.15s; }
     .btn-secondary:hover { border-color: #444; transform: translateY(-1px); }
 
-    .stats { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 4rem; width: 100%; max-width: 700px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.6s 0.4s ease both; }
+    .stats { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 4rem; width: 100%; max-width: 780px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.6s 0.4s ease both; }
     .stat { flex: 1; min-width: 140px; padding: 1.5rem 1rem; text-align: center; border-right: 1px solid var(--border); background: var(--bg2); }
     .stat:last-child { border-right: none; }
-    .stat-num { font-family: 'DM Mono', monospace; font-size: 1.8rem; font-weight: 500; color: var(--orange); }
-    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; text-transform: uppercase; }
+    .stat-num { font-family: 'DM Mono', monospace; font-size: 1.6rem; font-weight: 500; color: var(--orange); }
+    .stat-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; text-transform: uppercase; }
 
     section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
     .section-tag { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--orange); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1rem; }
@@ -134,14 +141,18 @@
 
     .media-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 3rem 2rem; max-width: 1100px; margin: 0 auto 5rem; }
     .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
-    .media-facts { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+    .media-story { display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; }
+    .story-item { display: flex; align-items: flex-start; gap: 10px; font-size: 0.82rem; color: #aaa; line-height: 1.5; padding: 0.6rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; }
+    .story-icon { flex-shrink: 0; }
+    .media-facts { display: flex; flex-direction: column; gap: 1rem; }
     .media-fact { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
     .fact-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
     .fact-text { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
     .fact-text strong { color: var(--text); display: block; margin-bottom: 2px; }
-    .media-contact { margin-top: 2rem; padding: 1.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+    .media-contact { margin-top: 1.5rem; padding: 1.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
     .media-contact p { font-size: 0.82rem; color: var(--muted); margin-bottom: 0.75rem; }
-    .media-contact a { color: var(--orange); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 0.85rem; }
+    .media-contact a.email { color: var(--orange); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 0.85rem; }
+    .media-contact a.dashboard-link { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,140,0,0.1); border: 1px solid rgba(255,140,0,0.25); color: var(--orange); padding: 8px 16px; border-radius: 4px; font-size: 0.78rem; text-decoration: none; margin-top: 1rem; }
 
     footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--muted); font-size: 0.78rem; }
     footer a { color: #444; text-decoration: none; }
@@ -154,74 +165,76 @@
       .nav-links a:not(.nav-cta) { display: none; }
       .media-grid { grid-template-columns: 1fr; gap: 2rem; }
       .stat { min-width: 120px; padding: 1.2rem 0.75rem; }
-      .stat-num { font-size: 1.4rem; }
-      .telegram-band { margin: 0 1rem 4rem; }
-      .media-section { margin: 0 1rem 4rem; }
+      .stat-num { font-size: 1.3rem; }
+      .telegram-band, .media-section { margin-left: 1rem; margin-right: 1rem; }
     }
   </style>
 </head>
 <body>
 
   <nav>
-    <a href="https://parkpulse.it" class="nav-logo">🅿 ParkPulse</a>
+    <a href="https://parkpulse.it" class="nav-logo">P ParkPulse</a>
     <div class="nav-links">
       <a href="https://parkpulse.it/bologna">Bologna</a>
       <a href="https://parkpulse.it/torino">Torino</a>
       <a href="https://parkpulse.it/firenze">Firenze</a>
       <a href="#media">Per i media</a>
-      <a href="https://parcheggi-automazione.streamlit.app" class="nav-cta">Apri Dashboard →</a>
+      <a href="https://parcheggi-automazione.streamlit.app" class="nav-cta">Apri Dashboard</a>
     </div>
   </nav>
 
   <div class="hero">
     <div class="hero-badge">
       <div class="pulse"></div>
-      LIVE · AGGIORNATO ORA
+      LIVE - AGGIORNATO ORA
     </div>
     <h1>Trova parcheggio libero<br><span>in tempo reale</span></h1>
     <p class="hero-sub">
       ParkPulse monitora 45+ parcheggi a Bologna, Torino e Firenze.
       Dati ufficiali aggiornati ogni 15 minuti. Gratuito, senza registrazione.
     </p>
+    <div class="hero-fact">
+      Il <strong>30% del traffico urbano</strong> e' ricerca parcheggio. ParkPulse ti dice dove c'e' posto <strong>prima di partire</strong>.
+    </div>
     <div class="hero-ctas">
-      <a href="https://parcheggi-automazione.streamlit.app" class="btn-primary">🅿 Apri Dashboard Live</a>
-      <a href="https://t.me/parkpulse_it_bot" class="btn-secondary">✈️ Bot Telegram</a>
+      <a href="https://parcheggi-automazione.streamlit.app" class="btn-primary">Apri Dashboard Live</a>
+      <a href="https://t.me/parkpulse_it_bot" class="btn-secondary">Bot Telegram</a>
     </div>
     <div class="stats">
       <div class="stat"><div class="stat-num">45+</div><div class="stat-label">Parcheggi monitorati</div></div>
       <div class="stat"><div class="stat-num">15 min</div><div class="stat-label">Aggiornamento</div></div>
-      <div class="stat"><div class="stat-num">3</div><div class="stat-label">Città italiane</div></div>
+      <div class="stat"><div class="stat-num">15.000+</div><div class="stat-label">Rilevazioni registrate</div></div>
       <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Dati ufficiali</div></div>
     </div>
   </div>
 
   <section>
     <div class="section-tag">Copertura</div>
-    <h2>Tre città, un'unica dashboard</h2>
-    <p class="section-sub">Seleziona la tua città e vedi in tempo reale quali parcheggi hanno posti disponibili.</p>
+    <h2>Tre citta', un'unica dashboard</h2>
+    <p class="section-sub">Seleziona la tua citta' e vedi in tempo reale quali parcheggi hanno posti disponibili.</p>
     <div class="city-grid">
       <a href="https://parkpulse.it/bologna" class="city-card">
-        <div class="city-emoji">🅱</div>
+        <div class="city-emoji">B</div>
         <div class="city-name">Bologna</div>
-        <div class="city-meta">8 parcheggi · ~3.500 posti totali</div>
+        <div class="city-meta">8 parcheggi - ~3.500 posti totali</div>
         <div class="city-pills">
           <span class="pill pill-orange">Centro storico</span>
           <span class="pill pill-green">API ufficiali</span>
         </div>
       </a>
       <a href="https://parkpulse.it/torino" class="city-card">
-        <div class="city-emoji">🔺</div>
+        <div class="city-emoji">T</div>
         <div class="city-name">Torino</div>
-        <div class="city-meta">16 parcheggi · ~8.000 posti totali</div>
+        <div class="city-meta">16 parcheggi - ~8.000 posti totali</div>
         <div class="city-pills">
           <span class="pill pill-orange">5T Torino</span>
           <span class="pill pill-green">API ufficiali</span>
         </div>
       </a>
       <a href="https://parkpulse.it/firenze" class="city-card">
-        <div class="city-emoji">🌸</div>
+        <div class="city-emoji">F</div>
         <div class="city-name">Firenze</div>
-        <div class="city-meta">13 parcheggi · ~6.800 posti totali</div>
+        <div class="city-meta">13 parcheggi - ~6.800 posti totali</div>
         <div class="city-pills">
           <span class="pill pill-orange">Firenze Parcheggi</span>
           <span class="pill pill-green">API ufficiali</span>
@@ -236,17 +249,17 @@
     <p class="section-sub">Nessuna registrazione, nessuna app da scaricare. Solo dati in tempo reale.</p>
     <div class="steps">
       <div class="step">
-        <div class="step-num">01 — DATI</div>
+        <div class="step-num">01 - DATI</div>
         <h3>Fonti ufficiali</h3>
         <p>ParkPulse si connette alle API ufficiali dei Comuni di Bologna, Torino e Firenze ogni 15 minuti.</p>
       </div>
       <div class="step">
-        <div class="step-num">02 — ANALISI</div>
+        <div class="step-num">02 - ANALISI</div>
         <h3>Storico e orari migliori</h3>
-        <p>I dati storici mostrano quando è più facile trovare parcheggio — informazione che nessuna app italiana offre.</p>
+        <p>I dati storici mostrano quando e' piu' facile trovare parcheggio, informazione unica nel panorama italiano.</p>
       </div>
       <div class="step">
-        <div class="step-num">03 — NAVIGA</div>
+        <div class="step-num">03 - NAVIGA</div>
         <h3>Un click per partire</h3>
         <p>Ogni parcheggio ha un bottone diretto a Google Maps e Waze per raggiungere subito il posto libero.</p>
       </div>
@@ -255,9 +268,9 @@
 
   <div style="padding: 0 2rem;">
     <div class="telegram-band">
-      <h3>☀️ Aggiornamento mattutino automatico</h3>
-      <p>Ricevi ogni mattina alle 8:00 lo snapshot della tua città direttamente su Telegram. Gratuito.</p>
-      <a href="https://t.me/parkpulse_it_bot" class="btn-telegram">✈️ Iscriviti al Bot Telegram</a>
+      <h3>Aggiornamento mattutino automatico</h3>
+      <p>Ricevi ogni mattina alle 8:00 lo snapshot della tua citta' direttamente su Telegram. Gratuito.</p>
+      <a href="https://t.me/parkpulse_it_bot" class="btn-telegram">Iscriviti al Bot Telegram</a>
     </div>
   </div>
 
@@ -268,12 +281,20 @@
           <div class="section-tag">Per i media</div>
           <h2>Una storia da raccontare</h2>
           <p class="section-sub">
-            ParkPulse nasce dalla frustrazione di cercare parcheggio nelle città italiane senza informazioni in tempo reale.
-            Le app esistenti mostrano solo dove pagare — nessuna mostra dove c'è posto.
+            Nasce a marzo 2026 da un problema concreto: le app di parcheggio italiane mostrano dove pagare, non dove c'e' posto.
+            ParkPulse collega direttamente le API ufficiali dei Comuni e le rende leggibili a chiunque, gratuitamente.
           </p>
+          <div class="media-story">
+            <div class="story-item"><span class="story-icon">Lanciato a marzo 2026 come progetto indipendente</span></div>
+            <div class="story-item"><span class="story-icon">Dati da API ufficiali di Bologna, Torino e Firenze</span></div>
+            <div class="story-item"><span class="story-icon">Oltre 15.000 rilevazioni registrate dal lancio</span></div>
+            <div class="story-item"><span class="story-icon">Obiettivo: ridurre il traffico da ricerca parcheggio nelle citta' italiane</span></div>
+          </div>
           <div class="media-contact">
             <p>Per informazioni, interviste o collaborazioni:</p>
-            <a href="mailto:info@parkpulse.it">info@parkpulse.it</a>
+            <a href="mailto:info@parkpulse.it" class="email">info@parkpulse.it</a>
+            <br>
+            <a href="https://parcheggi-automazione.streamlit.app" class="dashboard-link">Apri la dashboard live</a>
           </div>
         </div>
         <div>
@@ -289,7 +310,7 @@
               <div class="fact-icon">🕒</div>
               <div class="fact-text">
                 <strong>Storico delle occupazioni</strong>
-                ParkPulse registra ogni rilevazione e mostra gli orari con più disponibilità — funzione unica nel panorama italiano.
+                ParkPulse registra ogni rilevazione e mostra gli orari con piu' disponibilita', funzione unica nel panorama italiano.
               </div>
             </div>
             <div class="media-fact">
@@ -303,7 +324,7 @@
               <div class="fact-icon">🤖</div>
               <div class="fact-text">
                 <strong>Bot Telegram attivo</strong>
-                Gli utenti ricevono aggiornamenti mattutini automatici sulla disponibilità della propria città.
+                Gli utenti ricevono aggiornamenti mattutini automatici sulla disponibilita' della propria citta'.
               </div>
             </div>
           </div>
@@ -319,9 +340,9 @@
       <a href="https://parkpulse.it/firenze">Firenze</a>
       <a href="https://t.me/parkpulse_it_bot">Telegram</a>
       <a href="mailto:info@parkpulse.it">info@parkpulse.it</a>
-      <a href="https://paypal.me/parkpulse/3EUR">☕ Sostieni</a>
+      <a href="https://paypal.me/parkpulse/3EUR">Sostieni</a>
     </div>
-    <div>© 2026 ParkPulse — Dati da API ufficiali comunali</div>
+    <div>2026 ParkPulse - Dati da API ufficiali comunali</div>
   </footer>
 
   <script>
@@ -334,4 +355,3 @@
 
 </body>
 </html>
-
